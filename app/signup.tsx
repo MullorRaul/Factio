@@ -1,14 +1,81 @@
 // app/signup.tsx
-import React from 'react';
+import React, { useState } from 'react'; // Importa useState
 import {
     View, Text, TextInput, TouchableOpacity,
-    StyleSheet, StatusBar,
+    StyleSheet, StatusBar, Alert, ActivityIndicator // Importa Alert y ActivityIndicator
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
+import { useRouter } from 'expo-router'; // Importa useRouter para navegar después del éxito
+
+// !!! Configura la URL base de tu backend con tu IP local
+const API_BASE_URL = 'http://192.168.1.142:3001'; // <--- Tu URL del backend
 
 export default function SignUpScreen() {
+    const router = useRouter(); // Hook para navegación
+    const [email, setEmail] = useState('');
+    const [name, setName] = useState(''); // Asumiendo que el nombre de usuario se guarda aquí
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false); // Estado de carga
+
+    const handleSignUp = async () => {
+        console.log('handleSignUp: Iniciando función de registro'); // Log de inicio de función
+
+        // Validaciones básicas
+        if (!email || !name || !password) {
+            console.log('handleSignUp: Validación fallida - campos vacíos'); // Log 2: Validación fallida
+            Alert.alert('Error de registro', 'Por favor, completa todos los campos.');
+            setLoading(false); // Asegúrate de desactivar la carga si la validación falla
+            return;
+        }
+        console.log('handleSignUp: Validación exitosa'); // Log 3: Validación exitosa
+
+        setLoading(true); // Iniciar carga
+        console.log('handleSignUp: Estado de carga true'); // Log 4: Carga iniciada
+
+        try {
+            console.log(`handleSignUp: Intentando fetch a ${API_BASE_URL}/admin/signup`); // Log 5: Antes del fetch
+            const response = await fetch(`${API_BASE_URL}/admin/signup`, { // <-- Endpoint de registro
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: email,
+                    password: password,
+                    // Asegúrate de que el campo sea 'nombre' si tu backend lo espera así
+                    // (basado en la modificación anterior de app.js)
+                    nombre: name, // <-- Enviando el campo 'name' del frontend como 'nombre' al backend
+                }),
+            });
+            console.log('handleSignUp: Fetch completado'); // Log 6: Después del fetch
+
+            const data = await response.json();
+            console.log('handleSignUp: Respuesta parseada como JSON:', data); // Log 7: Respuesta JSON
+
+            if (response.ok) { // Código de estado 2xx
+                console.log('handleSignUp: Respuesta OK (2xx)'); // Log 8: Respuesta OK
+                Alert.alert('Registro exitoso', 'Tu cuenta de administrador de empresa ha sido creada.');
+                // Aquí podrías querer redirigir al usuario a la pantalla de login
+                router.replace('/login');
+            } else { // Códigos de estado de error (4xx, 5xx)
+                console.log('handleSignUp: Respuesta NO OK (error)', response.status); // Log 9: Respuesta error
+                console.error('Error en el registro (backend):', data.error);
+                Alert.alert('Error de registro', data.error || 'Ocurrió un error al registrar el usuario.');
+            }
+
+        } catch (error) {
+            console.log('handleSignUp: Error en el bloque catch'); // Log 10: Error en catch
+            console.error('Error de red o inesperado:', error);
+            Alert.alert('Error', 'No se pudo conectar con el servidor. Intenta de nuevo.');
+        } finally {
+            setLoading(false); // Finalizar carga
+            console.log('handleSignUp: Estado de carga false (finally)'); // Log 11: Carga finalizada
+        }
+    };
+
+
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" />
@@ -22,6 +89,9 @@ export default function SignUpScreen() {
                     placeholderTextColor="#aaa"
                     style={styles.input}
                     keyboardType="email-address"
+                    value={email} // Vincula el estado al input
+                    onChangeText={setEmail} // Actualiza el estado al cambiar el texto
+                    autoCapitalize="none" // Evita autocapitalización en emails
                 />
             </View>
 
@@ -33,6 +103,9 @@ export default function SignUpScreen() {
                     placeholder="@yourname"
                     placeholderTextColor="#aaa"
                     style={styles.input}
+                    value={name} // Vincula el estado al input
+                    onChangeText={setName} // Actualiza el estado al cambiar el texto
+                    // Podrías necesitar ajustar autoCapitalize/autoCorrect dependiendo del formato del nombre
                 />
             </View>
 
@@ -45,17 +118,24 @@ export default function SignUpScreen() {
                     placeholderTextColor="#aaa"
                     secureTextEntry
                     style={styles.input}
+                    value={password} // Vincula el estado al input
+                    onChangeText={setPassword} // Actualiza el estado al cambiar el texto
                 />
             </View>
 
             {/* Botón Sign Up */}
             <LinearGradient colors={['#e14eca','#f4524d']} style={styles.button}>
-                <TouchableOpacity onPress={() => {/* lógica de registro */}}>
-                    <Text style={styles.buttonText}>Sign up</Text>
+                {/* Llama a handleSignUp al presionar */}
+                <TouchableOpacity onPress={handleSignUp} disabled={loading}>
+                    {loading ? (
+                        <ActivityIndicator color="#fff" />
+                    ) : (
+                        <Text style={styles.buttonText}>Sign up</Text>
+                    )}
                 </TouchableOpacity>
             </LinearGradient>
 
-            {/* Otras opciones sociales */}
+            {/* Otras opciones sociales - Lógica no implementada aquí */}
             <Text style={styles.orText}>Or sign up with</Text>
             <View style={styles.socialRow}>
                 <TouchableOpacity style={styles.socialButton}>
@@ -77,6 +157,7 @@ export default function SignUpScreen() {
     );
 }
 
+// ... Tus estilos permanecen igual ...
 const styles = StyleSheet.create({
     container: {
         flex: 1,
