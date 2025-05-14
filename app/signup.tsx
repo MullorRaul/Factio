@@ -7,6 +7,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
+//hola
 
 export default function SignUpScreen() {
     return (
