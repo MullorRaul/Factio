@@ -12,7 +12,7 @@ import { useRouter } from 'expo-router';
 export default function LoginScreen() {
     const router = useRouter();
     return (
-
+//hola
         <View style={styles.container}>
             <StatusBar barStyle="light-content" />
             <Text style={styles.title}>Iniciar Sesión</Text>
