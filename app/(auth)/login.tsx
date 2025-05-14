@@ -1,4 +1,4 @@
-// app/signup.tsx
+// app/login.tsx
 import React from 'react';
 import {
     View, Text, TextInput, TouchableOpacity,
@@ -7,12 +7,15 @@ import {
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 
-export default function SignUpScreen() {
+export default function LoginScreen() {
+    const router = useRouter();
     return (
+
         <View style={styles.container}>
             <StatusBar barStyle="light-content" />
-            <Text style={styles.title}>Factio</Text>
+            <Text style={styles.title}>Iniciar Sesión</Text>
 
             {/* Email */}
             <View style={styles.inputContainer}>
@@ -25,19 +28,8 @@ export default function SignUpScreen() {
                 />
             </View>
 
-            {/* Name */}
-            <Text style={styles.label}>Your Name</Text>
-            <View style={styles.inputContainer}>
-                <Icon name="account-outline" size={20} color="#aaa" />
-                <TextInput
-                    placeholder="@yourname"
-                    placeholderTextColor="#aaa"
-                    style={styles.input}
-                />
-            </View>
-
             {/* Password */}
-            <Text style={styles.label}>Password</Text>
+            <Text style={styles.label}>Contraseña</Text>
             <View style={styles.inputContainer}>
                 <Icon name="lock-outline" size={20} color="#aaa" />
                 <TextInput
@@ -48,30 +40,16 @@ export default function SignUpScreen() {
                 />
             </View>
 
-            {/* Botón Sign Up */}
+            {/* Botón Login */}
             <LinearGradient colors={['#e14eca','#f4524d']} style={styles.button}>
-                <TouchableOpacity onPress={() => {/* lógica de registro */}}>
-                    <Text style={styles.buttonText}>Sign up</Text>
+                <TouchableOpacity onPress={() => router.replace('/offers')}>
+                    <Text>Ver Pubs</Text>
                 </TouchableOpacity>
             </LinearGradient>
 
-            {/* Otras opciones sociales */}
-            <Text style={styles.orText}>Or sign up with</Text>
-            <View style={styles.socialRow}>
-                <TouchableOpacity style={styles.socialButton}>
-                    <Icon name="google" size={24} color="#fff" />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.socialButton}>
-                    <Icon name="apple" size={24} color="#fff" />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.socialButton}>
-                    <Icon name="facebook" size={24} color="#fff" />
-                </TouchableOpacity>
-            </View>
-
-            {/* Link a Login */}
-            <Link href="/login" style={styles.switchLink}>
-                <Text style={styles.switchText}>¿Ya tienes cuenta? Iniciar sesión</Text>
+            {/* Link a Sign Up */}
+            <Link href="/(auth)/signup" style={styles.switchLink}>
+                <Text style={styles.switchText}>¿No tienes cuenta? Regístrate</Text>
             </Link>
         </View>
     );
@@ -99,9 +77,6 @@ const styles = StyleSheet.create({
     input: { flex: 1, color: '#fff' },
     button: { marginTop: 20, width: '100%', padding: 15, borderRadius: 10, alignItems: 'center' },
     buttonText: { color: '#fff', fontWeight: 'bold' },
-    orText: { color: '#aaa', marginTop: 20 },
-    socialRow: { flexDirection: 'row', marginTop: 10 },
-    socialButton: { backgroundColor: '#1e1e1e', padding: 12, borderRadius: 10, marginHorizontal: 5 },
     switchLink: { marginTop: 20 },
     switchText: { color: '#aaa', textDecorationLine: 'underline' },
 });
