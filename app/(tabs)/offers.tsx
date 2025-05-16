@@ -8,7 +8,7 @@ import {
     FlatList,
     ImageBackground,
     TouchableOpacity, // Necesario para el botón
-    // Alert, // Ya no necesitamos Alert para el botón de eventos
+    Alert, // Necesario si decides usar alertas para pubs sin eventos
 } from 'react-native';
 // LinearGradient es necesario si lo sigues usando en los estilos
 import { LinearGradient } from 'expo-linear-gradient';
@@ -28,7 +28,7 @@ interface PubAd {
     // Puedes añadir un campo para el ID del evento real si lo obtienes del backend
     // eventId: number;
     // Añadimos un campo para la ruta de eventos específica si es necesario
-    eventRoute?: string;
+    // eventRoute?: string; // Ya no es estrictamente necesario si navegamos por nombre
 }
 
 // Datos de ejemplo (Hardcoded por ahora)
@@ -43,7 +43,7 @@ const DATA: PubAd[] = [
         musicType: 'Rock',
         entryPrice: 'Gratis',
         // eventId: 1, // Ejemplo de cómo podrías tener un ID real
-        eventRoute: '/(tabs)/eventos_delirium', // Ruta a la pantalla de eventos de Delirium
+        // eventRoute: '/eventos_delirium', // La ruta real es solo /eventos_delirium
     },
     {
         id: '2',
@@ -54,7 +54,7 @@ const DATA: PubAd[] = [
         musicType: 'Electrónica',
         entryPrice: '5€ con copa',
         // eventId: 2, // Ejemplo de cómo podrías tener un ID real
-        eventRoute: '/(tabs)/eventos_gaudi', // Ruta a la pantalla de eventos de Gaudi
+        // eventRoute: '/eventos_gaudi', // La ruta real es solo /eventos_gaudi
     },
     // más pubs...
 ];
@@ -64,15 +64,28 @@ export default function OffersScreen() {
     const router = useRouter();
 
     // Función para manejar el botón "Ver Eventos Semanales"
-    const handleViewEvents = (event: PubAd) => {
-        if (event.eventRoute) {
-            // Navegar a la ruta específica del evento
-            // Corregido: Casting event.eventRoute to 'any' to satisfy TypeScript
-            router.push(event.eventRoute as any);
+    const handleViewEvents = (pub: PubAd) => {
+        // Navegación basada en el nombre del pub.
+        // **CORREGIDO:** Las rutas son directas desde la raíz '/' ya que los archivos
+        // eventos_delirium.tsx y eventos_gaudi.tsx están directamente en la carpeta `app`.
+        if (pub.name === 'Pub Delirium') {
+            // Navega a la ruta específica de Delirium.
+            router.push('/eventos_delirium' as any); // Ruta corregida
+        } else if (pub.name === 'Gaudi') {
+            // Navega a la ruta específica de Gaudi.
+            router.push('/eventos_gaudi' as any); // Ruta corregida
         } else {
-            // Si no hay ruta definida, mostrar una alerta o navegar a una pantalla genérica
-            console.warn(`No eventRoute defined for ${event.name}`);
+            // Si el pub no tiene una ruta de evento específica definida aquí, muestra una alerta.
+            Alert.alert('Info', `No hay eventos semanales definidos para ${pub.name}.`);
+            console.warn(`No specific event route found for ${pub.name}.`);
         }
+
+        // Alternativa más robusta (si tuvieras una pantalla de evento genérica y un ID):
+        // if (pub.eventId) {
+        //      router.push(`/events/${pub.eventId}` as any); // Navega a una pantalla de detalle de evento genérica usando el ID
+        // } else {
+        //      Alert.alert('Info', `No hay eventos semanales definidos para ${pub.name}.`);
+        // }
     };
 
     const renderItem = ({ item }: { item: PubAd }) => (
@@ -95,9 +108,9 @@ export default function OffersScreen() {
                     {/* Botón "Ver Eventos Semanales" */}
                     <TouchableOpacity
                         style={styles.viewEventsButton}
-                        onPress={() => handleViewEvents(item)}
+                        onPress={() => handleViewEvents(item)} // Llama a la función de navegación
                     >
-                        <Text style={styles.viewEventsButtonText}>Ver Eventos Semanales</Text>
+                        <Text style={styles.viewEventsButtonText}>Ver Eventos Semanales</Text> {/* Texto del botón */}
                     </TouchableOpacity>
 
                 </View>

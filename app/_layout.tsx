@@ -36,25 +36,24 @@ export default function RootLayout() {
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
 
             {/*
-        Aquí puedes añadir otras pantallas o grupos de rutas de nivel superior
-        si las tienes. Por ejemplo, si moviste tus archivos de eventos a `app/events/`:
-        <Stack.Screen name="events" options={{ headerShown: false }} />
-        Esto permitiría navegar al grupo de eventos. El layout dentro de `app/events`
-        (si existe) manejaría la navegación dentro de ese grupo.
-
-        Si tus archivos de eventos (`eventos_delirium.tsx`, `eventos_gaudi.tsx`)
-        están directamente en la carpeta `app` (no dentro de `(tabs)` ni `(auth)`
-        ni `events`), entonces los definirías aquí directamente:
-        <Stack.Screen name="eventos_delirium" options={{ title: 'Eventos Delirium' }} />
-        <Stack.Screen name="eventos_gaudi" options={{ title: 'Eventos Gaudi' }} />
-        (Pero por cómo estructuraste las pestañas, parece que están en un grupo separado).
+        Stack.Screen name="eventos_delirium"
+        Define la pantalla eventos_delirium.tsx que está directamente en la carpeta `app`.
+        options={{ headerShown: false }} oculta el encabezado por defecto para esta pantalla.
       */}
+            <Stack.Screen name="eventos_delirium" options={{ headerShown: false }} />
 
             {/*
-        Stack.Screen name="+not-found"
-        Esto define la pantalla que se muestra cuando `expo-router` no encuentra una ruta.
-        Si tu archivo `+not-found.tsx` está directamente en la carpeta `app`,
-        esta línea asegura que se pueda navegar a él cuando ocurra un error de ruta.
+        Stack.Screen name="eventos_gaudi"
+        Define la pantalla eventos_gaudi.tsx que está directamente en la carpeta `app`.
+        options={{ headerShown: false }} oculta el encabezado por defecto para esta pantalla.
+      */}
+            <Stack.Screen name="eventos_gaudi" options={{ headerShown: false }} />
+
+
+            {/*
+        La pantalla not-found de nivel superior (app/+not-found.tsx)
+        se define aquí si quieres que se muestre cuando no se encuentre una ruta.
+        Si tu +not-found.tsx está directamente en la carpeta `app`, esta línea la maneja.
         options={{ headerShown: false }} para que la pantalla de error no tenga encabezado.
       */}
             <Stack.Screen name="+not-found" options={{ headerShown: false }} />
