@@ -82,18 +82,17 @@ app.get('/health', (req, res) => {
 
 // ====================== RUTAS DE AUTENTICACIÓN Y DATOS DE USUARIO ======================
 
-// RUTA DE REGISTRO DE USUARIO - MODIFICADA PARA SUBIR FOTOS
+// RUTA DE REGISTRO DE USUARIO - MODIFICADA PARA RECIBIR CAMPO GENERO Y FOTOS
 // Aplicamos el middleware de multer aquí. Esperamos campos de archivo llamados 'foto1' y 'foto2'.
 app.post('/usuarios/signup', upload.fields([{ name: 'foto1', maxCount: 1 }, { name: 'foto2', maxCount: 1 }]), async (req, res) => {
 
-    // req.body contendrá los campos de texto (email, password, edad, etc.)
+    // req.body contendrá los campos de texto (email, password, edad, genero, estudios_trabajo, orientacion_sexual)
     // req.files contendrá los archivos subidos, agrupados por el nombre del campo ('foto1', 'foto2')
-    const { email, username, password, edad, estudios_trabajo, orientacion_sexual } = req.body;
+    const { email, username, password, edad, genero, estudios_trabajo, orientacion_sexual } = req.body; // Añadido 'genero'
     const fotos = req.files; // { foto1: [{...}], foto2: [{...}] }
 
     // 1. Validar campos de texto requeridos
     if (!email || !username || !password) {
-        // Si faltan campos de texto requeridos, retornamos error. Multer ya habrá procesado los archivos (en memoria).
         return res.status(400).json({ error: 'Email, username y password son requeridos para el registro' });
     }
 
@@ -149,17 +148,40 @@ app.post('/usuarios/signup', upload.fields([{ name: 'foto1', maxCount: 1 }, { na
             password_hash: hashedPassword
         };
 
-        // Añadir campos opcionales de texto si están presentes y son válidos
+        // Añadir campos opcionales de texto/selección si están presentes y son válidos
+        // Aseguramos que los campos de selección con valor '' se envíen como NULL a la DB
         if (edad !== undefined && edad !== null && String(edad).trim() !== '') {
             const parsedEdad = parseInt(String(edad).trim(), 10);
             if (!isNaN(parsedEdad)) userDataToInsert.edad = parsedEdad;
         }
+
+        // Incluir el campo genero si está presente y NO es una cadena vacía después de trim
+        if (genero !== undefined && genero !== null && String(genero).trim() !== '') {
+            userDataToInsert.genero = String(genero).trim();
+        } else {
+            // Si el género es undefined, null o '', lo establecemos explícitamente a null para la inserción
+            userDataToInsert.genero = null;
+        }
+
+
         if (estudios_trabajo !== undefined && estudios_trabajo !== null && String(estudios_trabajo).trim() !== '') {
             userDataToInsert.estudios_trabajo = String(estudios_trabajo).trim();
+        } else {
+            userDataToInsert.estudios_trabajo = null;
         }
+
         if (orientacion_sexual !== undefined && orientacion_sexual !== null && String(orientacion_sexual).trim() !== '') {
             userDataToInsert.orientacion_sexual = String(orientacion_sexual).trim();
+        } else {
+            userDataToInsert.orientacion_sexual = null;
         }
+
+
+        // --- DEBUGGING: Log userDataToInsert before insert ---
+        console.log('DEBUG: userDataToInsert before insert:', userDataToInsert);
+        console.log('----------------------------------------');
+        // --- FIN DEBUGGING ---
+
 
         // 6. Insertar el usuario en la base de datos para obtener el cod_usuario generado
         // Usamos .select() para obtener los datos del usuario insertado, incluyendo el cod_usuario
@@ -258,7 +280,7 @@ app.post('/usuarios/signup', upload.fields([{ name: 'foto1', maxCount: 1 }, { na
             })
             .eq('cod_usuario', userId) // ¡Asegúrate de actualizar la fila correcta usando el userId!
             // Seleccionamos los campos finales del usuario para la respuesta
-            .select('cod_usuario, email, nombre, username, edad, estudios_trabajo, orientacion_sexual, foto_url_1, foto_url_2')
+            .select('cod_usuario, email, nombre, username, edad, genero, estudios_trabajo, orientacion_sexual, foto_url_1, foto_url_2') // Añadido 'genero' en la selección
             .single(); // Esperamos el usuario actualizado
 
         if (updateError) {
@@ -346,11 +368,11 @@ app.post('/usuarios/login', async (req, res) => {
     }
 });
 
-// RUTA DE PERFIL DE USUARIO (Modificada para incluir URLs de fotos)
+// RUTA DE PERFIL DE USUARIO (Modificada para incluir URLs de fotos y genero)
 // Requiere el middleware authenticateUser para verificar el token
 app.get('/usuarios/profile', authenticateUser, async (req, res) => {
     try {
-        // Incluye las nuevas columnas foto_url_1 y foto_url_2 en la selección
+        // Incluye las nuevas columnas foto_url_1, foto_url_2 y genero en la selección
         const { data: profile, error } = await supabase
             .from('usuario')
             .select(`
@@ -359,10 +381,11 @@ app.get('/usuarios/profile', authenticateUser, async (req, res) => {
                  nombre,
                  username,
                  edad,
+                 genero, -- <-- Incluido
                  estudios_trabajo,
                  orientacion_sexual,
-                 foto_url_1, -- <-- Incluido
-                 foto_url_2, -- <-- Incluido
+                 foto_url_1,
+                 foto_url_2,
                  location::geometry -> ST_Y as latitude,
                  location::geometry -> ST_X as longitude
              `)
@@ -474,6 +497,7 @@ app.get('/usuarios/nearby', async (req, res) => {
                 nombre,
                 username,
                 edad,
+                genero, -- <-- Incluido
                 estudios_trabajo,
                 orientacion_sexual,
                 location::geometry -> ST_Y as latitude,

@@ -2,12 +2,13 @@
 import React, { useState } from 'react';
 import {
     View, Text, TextInput, TouchableOpacity,
-    StyleSheet, StatusBar, Alert, ActivityIndicator, ScrollView, Image // Importa Image para mostrar previsualización
+    StyleSheet, StatusBar, Alert, ActivityIndicator, ScrollView, Image, Platform
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker'; // Importa ImagePicker
+import * as ImagePicker from 'expo-image-picker';
+import { Picker } from '@react-native-picker/picker'; // Importa Picker
 
 // Define la URL base de tu backend usando la IP local de tu ordenador
 // ¡CAMBIA ESTO POR LA URL DE TU SERVIDOR DE PRODUCCIÓN CUANDO DESPLIEGUES!
@@ -16,84 +17,90 @@ const API_BASE_URL = 'http://192.168.1.142:3001'; // <-- IP de tu ordenador
 export default function SignUpScreen() {
     const router = useRouter();
     const [email, setEmail] = useState('');
-    const [username, setUsername] = useState(''); // Estado para username
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [edad, setEdad] = useState(''); // Estado para Edad (opcional)
-    const [estudiosTrabajo, setEstudiosTrabajo] = useState(''); // Estado para Estudios_Trabajo (opcional)
-    const [orientacionSexual, setOrientacionSexual] = useState(''); // Estado para Orientacion_sexual (opcional)
-    const [isLoading, setIsLoading] = useState(false); // Estado para indicador de carga
+    const [edad, setEdad] = useState('');
 
-    // Nuevos estados para las fotos
-    const [foto1Uri, setFoto1Uri] = useState<string | null>(null); // URI de la primera foto seleccionada
-    const [foto2Uri, setFoto2Uri] = useState<string | null>(null); // URI de la segunda foto seleccionada
+    // Estados para los campos de selección - Cambiados de null a ''
+    const [genero, setGenero] = useState<string>(''); // Estado para Género (opcional)
+    const [estudiosTrabajo, setEstudiosTrabajo] = useState<string>(''); // Estado para Estudios_Trabajo (opcional)
+    const [orientacionSexual, setOrientacionSexual] = useState<string>(''); // Estado para Orientacion_sexual (opcional)
 
-    // Función para seleccionar una imagen
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Estados para las fotos (sin cambios)
+    const [foto1Uri, setFoto1Uri] = useState<string | null>(null);
+    const [foto2Uri, setFoto2Uri] = useState<string | null>(null);
+
+    // Función para seleccionar una imagen (sin cambios)
     const pickImage = async (setFotoUri: React.Dispatch<React.SetStateAction<string | null>>) => {
-        // Solicitar permisos de la galería
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
             Alert.alert('Permisos requeridos', 'Necesitamos permisos para acceder a tu galería de fotos.');
             return;
         }
 
-        // Abrir la galería para seleccionar una imagen
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images, // Solo imágenes
-            allowsEditing: true, // Permite editar/recortar la imagen seleccionada
-            aspect: [4, 3], // Aspect ratio opcional
-            quality: 1, // Calidad de la imagen (0 a 1)
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [4, 3],
+            quality: 1,
         });
 
-        // Si el usuario no canceló y seleccionó una imagen
         if (!result.canceled && result.assets && result.assets.length > 0) {
             const selectedAsset = result.assets[0];
-            setFotoUri(selectedAsset.uri); // Guarda la URI de la imagen seleccionada
+            setFotoUri(selectedAsset.uri);
         }
     };
 
 
     const handleSignUp = async () => {
-        // Validar campos requeridos (Email, Username, Password)
         if (!email || !username || !password) {
             Alert.alert('Error', 'Por favor, completa los campos de email, username y contraseña.');
             return;
         }
 
-        setIsLoading(true); // Inicia el indicador de carga
+        setIsLoading(true);
 
-        // Crear un objeto FormData para enviar datos mixtos (texto y archivos)
         const formData = new FormData();
 
-        // Añadir campos de texto al FormData
         formData.append('email', email);
         formData.append('username', username);
         formData.append('password', password);
 
-        // Añadir campos opcionales si tienen valor
+        // Añadir campos opcionales si tienen valor (no son cadenas vacías o solo espacios)
         if (edad && edad.trim() !== '') {
-            // Asegúrate de que el backend espera un número o una cadena
-            formData.append('edad', edad.trim()); // Enviamos como string, el backend puede parsear a int
+            formData.append('edad', edad.trim());
         }
-        if (estudiosTrabajo && estudiosTrabajo.trim() !== '') {
+
+        // Añadir los campos de selección si tienen un valor seleccionado que NO es la cadena vacía ''
+        if (genero !== '') { // Comprobar si no es la cadena vacía
+            formData.append('genero', genero);
+        }
+        // Para estudiosTrabajo y orientacionSexual, si usas los botones de selección o Picker con '' como valor por defecto,
+        // la lógica es la misma: solo añadir si el valor no es la cadena vacía.
+        // Si usas los botones de selección, el estado será null o 'Estudiante'/'Trabajando'.
+        // Si usas Picker con '' como valor por defecto, el estado será '' o la opción seleccionada.
+        // Asegurémonos de enviar solo si el valor no es nulo O no es una cadena vacía después de trim.
+        if (estudiosTrabajo !== '' && estudiosTrabajo.trim() !== '') { // Asegurar que no sea '' ni solo espacios
             formData.append('estudios_trabajo', estudiosTrabajo.trim());
         }
-        if (orientacionSexual && orientacionSexual.trim() !== '') {
+        if (orientacionSexual !== '' && orientacionSexual.trim() !== '') { // Asegurar que no sea '' ni solo espacios
             formData.append('orientacion_sexual', orientacionSexual.trim());
         }
 
-        // Añadir archivos de foto al FormData si se seleccionaron
-        // El nombre del campo ('foto1', 'foto2') debe coincidir con lo que espera Multer en el backend
+
+        // Añadir archivos de foto al FormData si se seleccionaron (sin cambios)
         if (foto1Uri) {
-            // Para FormData con archivos en React Native, necesitas crear un objeto con uri, name y type
             const uriParts = foto1Uri.split('.');
             const fileType = uriParts[uriParts.length - 1];
-            const fileName = `foto1_${Date.now()}.${fileType}`; // Genera un nombre de archivo único
+            const fileName = `foto1_${Date.now()}.${fileType}`;
 
             formData.append('foto1', {
                 uri: foto1Uri,
                 name: fileName,
-                type: `image/${fileType}`, // Asegúrate de que el tipo MIME sea correcto
-            } as any); // Usamos 'as any' para evitar errores de tipo con FormData y archivos en RN
+                type: `image/${fileType}`,
+            } as any);
         }
 
         if (foto2Uri) {
@@ -110,14 +117,9 @@ export default function SignUpScreen() {
 
 
         try {
-            // Llama a la ruta de registro de usuario en tu backend
             const response = await fetch(`${API_BASE_URL}/usuarios/signup`, {
                 method: 'POST',
-                // ¡IMPORTANTE! No establezcas el 'Content-Type' a 'multipart/form-data' manualmente.
-                // Cuando envías un objeto FormData, el método fetch en navegadores y React Native
-                // lo establece automáticamente con el boundary correcto.
-                // headers: { 'Content-Type': 'multipart/form-data', ... }, // <-- NO HACER ESTO
-                body: formData, // Envía el objeto FormData
+                body: formData,
             });
 
             const data = await response.json();
@@ -125,41 +127,40 @@ export default function SignUpScreen() {
             if (!response.ok) {
                 Alert.alert('Error al registrarse', data.error || 'Error desconocido.');
                 console.error('Error response data:', data);
-                setPassword(''); // Limpiar contraseña por seguridad
+                setPassword('');
                 return;
             }
 
-            // Registro exitoso
             Alert.alert('Registro exitoso', 'Tu cuenta ha sido creada. Ahora puedes iniciar sesión.');
 
-            // Limpiar formulario y navegar a login
+            // Limpiar formulario
             setEmail('');
             setUsername('');
             setPassword('');
             setEdad('');
-            setEstudiosTrabajo('');
-            setOrientacionSexual('');
-            setFoto1Uri(null); // Limpiar URIs de fotos
+            setGenero(''); // Limpiar estado de género a cadena vacía
+            setEstudiosTrabajo(''); // Limpiar estado de estudios/trabajo a cadena vacía
+            setOrientacionSexual(''); // Limpiar estado de orientación sexual a cadena vacía
+            setFoto1Uri(null);
             setFoto2Uri(null);
 
-            router.replace('/(auth)/login'); // Navega a la pantalla de login
+            router.replace('/(auth)/login');
 
         } catch (error: any) {
             console.error('Error durante la petición de signup:', error);
             Alert.alert('Error de conexión', 'No se pudo conectar con el servidor. Asegúrate de que el backend está corriendo y la IP es correcta.');
-            setPassword(''); // Limpiar contraseña
+            setPassword('');
         } finally {
-            setIsLoading(false); // Detiene el indicador de carga
+            setIsLoading(false);
         }
     };
 
     return (
-        // Envuelve el contenido en ScrollView para manejar el desbordamiento con muchos campos
         <ScrollView contentContainerStyle={styles.scrollContainer} style={styles.container}>
             <StatusBar barStyle="light-content" />
             <Text style={styles.title}>Factio</Text>
 
-            {/* Campos de texto (Sin cambios) */}
+            {/* Campos de texto (Email, Username, Password, Edad) - Sin cambios en la estructura */}
             <Text style={styles.label}>Email</Text>
             <View style={styles.inputContainer}>
                 <Icon name="email-outline" size={20} color="#aaa" />
@@ -184,22 +185,72 @@ export default function SignUpScreen() {
                 <TextInput placeholder="Ej: 25" placeholderTextColor="#aaa" style={styles.input} keyboardType="numeric" value={edad} onChangeText={setEdad} />
             </View>
 
+            {/* Campo de Género (Desplegable) */}
+            <Text style={styles.label}>Género (Opcional)</Text>
+            <View style={styles.pickerContainer}>
+                <Icon name="gender-male-female" size={20} color="#aaa" style={styles.pickerIcon} />
+                <Picker
+                    selectedValue={genero} // Usar estado 'genero'
+                    onValueChange={(itemValue: string) => setGenero(itemValue)} // Actualizar estado 'genero'
+                    style={styles.picker}
+                    itemStyle={styles.pickerItem} // Estilo para los ítems del Picker (solo Android)
+                >
+                    {/* Opción por defecto con value="" */}
+                    <Picker.Item label="Selecciona tu género" value="" enabled={false} style={{ color: '#aaa' }} />
+                    <Picker.Item label="Masculino" value="Masculino" style={{ color: '#fff' }} />
+                    <Picker.Item label="Femenino" value="Femenino" style={{ color: '#fff' }} />
+                    <Picker.Item label="Otro" value="Otro" style={{ color: '#fff' }} />
+                </Picker>
+            </View>
+
+
+            {/* Campo Estudios / Trabajo (Botones de Selección) */}
             <Text style={styles.label}>Estudios / Trabajo (Opcional)</Text>
-            <View style={styles.inputContainer}>
-                <Icon name="school-outline" size={20} color="#aaa" />
-                <TextInput placeholder="Ej: Estudiante, Ingeniero" placeholderTextColor="#aaa" style={styles.input} value={estudiosTrabajo} onChangeText={setEstudiosTrabajo} />
+            <View style={styles.selectionButtonContainer}>
+                <TouchableOpacity
+                    style={[styles.selectionButton, estudiosTrabajo === 'Estudiante' && styles.selectionButtonSelected]}
+                    onPress={() => setEstudiosTrabajo('Estudiante')}
+                >
+                    <Text style={[styles.selectionButtonText, estudiosTrabajo === 'Estudiante' && styles.selectionButtonTextSelected]}>Estudiante</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.selectionButton, estudiosTrabajo === 'Trabajando' && styles.selectionButtonSelected]}
+                    onPress={() => setEstudiosTrabajo('Trabajando')}
+                >
+                    <Text style={[styles.selectionButtonText, estudiosTrabajo === 'Trabajando' && styles.selectionButtonTextSelected]}>Trabajando</Text>
+                </TouchableOpacity>
+                {/* Opción para deseleccionar */}
+                {estudiosTrabajo !== '' && ( // Comprobar si no es cadena vacía
+                    <TouchableOpacity onPress={() => setEstudiosTrabajo('')} style={styles.clearSelectionButton}> {/* Limpiar a cadena vacía */}
+                        <Icon name="close-circle-outline" size={20} color="#aaa" />
+                    </TouchableOpacity>
+                )}
             </View>
 
+
+            {/* Campo Orientación Sexual (Desplegable) */}
             <Text style={styles.label}>Orientación Sexual (Opcional)</Text>
-            <View style={styles.inputContainer}>
-                <Icon name="gender-male-female" size={20} color="#aaa" />
-                <TextInput placeholder="Ej: Heterosexual" placeholderTextColor="#aaa" style={styles.input} value={orientacionSexual} onChangeText={setOrientacionSexual} />
+            <View style={styles.pickerContainer}>
+                <Icon name="gender-male-female" size={20} color="#aaa" style={styles.pickerIcon} />
+                <Picker
+                    selectedValue={orientacionSexual} // Usar estado 'orientacionSexual'
+                    onValueChange={(itemValue: string) => setOrientacionSexual(itemValue)} // Actualizar estado 'orientacionSexual'
+                    style={styles.picker}
+                    itemStyle={styles.pickerItem} // Estilo para los ítems del Picker (solo Android)
+                >
+                    {/* Opción por defecto con value="" */}
+                    <Picker.Item label="Selecciona tu orientación" value="" enabled={false} style={{ color: '#aaa' }} />
+                    <Picker.Item label="Heterosexual" value="Heterosexual" style={{ color: '#fff' }} />
+                    <Picker.Item label="Bisexual" value="Bisexual" style={{ color: '#fff' }} />
+                    <Picker.Item label="Homosexual" value="Homosexual" style={{ color: '#fff' }} />
+                    <Picker.Item label="Otro" value="Otro" style={{ color: '#fff' }} />
+                </Picker>
             </View>
 
-            {/* Sección de Carga de Fotos */}
+
+            {/* Sección de Carga de Fotos (Sin cambios en la estructura) */}
             <Text style={styles.label}>Fotos (Opcional)</Text>
             <View style={styles.photoUploadContainer}>
-                {/* Botón y previsualización para Foto 1 */}
                 <View style={styles.photoInputGroup}>
                     <TouchableOpacity style={styles.photoButton} onPress={() => pickImage(setFoto1Uri)}>
                         <Icon name="camera-plus-outline" size={24} color="#fff" />
@@ -210,7 +261,6 @@ export default function SignUpScreen() {
                     )}
                 </View>
 
-                {/* Botón y previsualización para Foto 2 */}
                 <View style={styles.photoInputGroup}>
                     <TouchableOpacity style={styles.photoButton} onPress={() => pickImage(setFoto2Uri)}>
                         <Icon name="camera-plus-outline" size={24} color="#fff" />
@@ -252,27 +302,24 @@ export default function SignUpScreen() {
             <Link href="/(auth)/login" style={styles.switchLink}>
                 <Text style={styles.switchText}>¿Ya tienes cuenta? Iniciar sesión</Text>
             </Link>
-        </ScrollView> // Cierra ScrollView
+        </ScrollView>
     );
 }
 
 const styles = StyleSheet.create({
-    // Añade un estilo para el contenido dentro del ScrollView
     scrollContainer: {
-        flexGrow: 1, // Permite que el contenido crezca
-        // justifyContent: 'center', // Puedes quitar esto si prefieres que el contenido empiece desde arriba
+        flexGrow: 1,
         alignItems: 'center',
         padding: 20,
-        paddingTop: 50, // Añade un poco de padding arriba si es necesario
-        paddingBottom: 50, // Añade padding abajo para que el último campo no quede pegado al borde
+        paddingTop: 50,
+        paddingBottom: 50,
     },
     container: {
         flex: 1,
         backgroundColor: '#0d0d0d',
-        // Elimina alignItems y justifyContent de aquí si los pones en scrollContainer
     },
     title: { fontSize: 36, color: '#fff', fontWeight: 'bold', marginBottom: 30 },
-    label: { color: '#fff', alignSelf: 'flex-start', marginLeft: 10, marginTop: 15, fontSize: 14 }, // Ajustado marginTop
+    label: { color: '#fff', alignSelf: 'flex-start', marginLeft: 10, marginTop: 15, fontSize: 14 },
     inputContainer: {
         flexDirection: 'row',
         backgroundColor: '#1e1e1e',
@@ -283,7 +330,7 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     input: { flex: 1, color: '#fff', paddingVertical: 0, marginLeft: 10 },
-    button: { marginTop: 25, width: '100%', padding: 15, borderRadius: 10, alignItems: 'center' }, // Ajustado marginTop
+    button: { marginTop: 25, width: '100%', padding: 15, borderRadius: 10, alignItems: 'center' },
     buttonText: { color: '#fff', fontWeight: 'bold' },
     orText: { color: '#aaa', marginTop: 20 },
     socialRow: { flexDirection: 'row', marginTop: 10 },
@@ -291,18 +338,87 @@ const styles = StyleSheet.create({
     switchLink: { marginTop: 20 },
     switchText: { color: '#aaa', textDecorationLine: 'underline' },
 
-    // Nuevos estilos para la carga de fotos
-    photoUploadContainer: {
-        flexDirection: 'row', // Organiza los grupos de fotos horizontalmente
-        justifyContent: 'space-around', // Distribuye el espacio alrededor de los elementos
+    // Nuevos estilos para Pickers (Desplegables)
+    pickerContainer: {
+        flexDirection: 'row',
+        backgroundColor: '#1e1e1e',
+        borderRadius: 10,
+        marginTop: 8,
+        alignItems: 'center',
         width: '100%',
-        marginTop: 10,
-        marginBottom: 10, // Espacio después de la sección de fotos
+        paddingLeft: 10, // Espacio para el icono
+        overflow: 'hidden', // Asegura que el Picker no se salga del contenedor
+        // Ajuste de altura para que sea más pequeño
+        height: 50, // Altura reducida
+    },
+    pickerIcon: {
+        marginRight: 10,
+    },
+    picker: {
+        flex: 1,
+        color: '#fff',
+        // Ajustes específicos para iOS y Android si es necesario
+        ...Platform.select({
+            ios: {
+                // En iOS, el Picker es un componente nativo, la altura del contenedor influye.
+                // Puedes necesitar ajustar el paddingVertical del contenedor si el texto se ve cortado.
+            },
+            android: {
+                height: 50, // Asegura que la altura sea consistente en Android
+            },
+        }),
+    },
+    pickerItem: {
+        color: '#fff',
+        backgroundColor: '#1e1e1e',
+    },
+
+    // Nuevos estilos para Botones de Selección (Estudios / Trabajo)
+    selectionButtonContainer: {
+        flexDirection: 'row',
+        width: '100%',
+        marginTop: 8,
+        justifyContent: 'space-around',
+        alignItems: 'center',
+        backgroundColor: '#1e1e1e',
+        borderRadius: 10,
+        padding: 5,
+    },
+    selectionButton: {
+        flex: 1,
+        padding: 12,
+        borderRadius: 8,
+        alignItems: 'center',
+        backgroundColor: '#2a2a2a',
+        marginHorizontal: 3,
+    },
+    selectionButtonSelected: {
+        backgroundColor: '#e14eca',
+    },
+    selectionButtonText: {
+        color: '#aaa',
+        fontWeight: 'bold',
+    },
+    selectionButtonTextSelected: {
+        color: '#fff',
+    },
+    clearSelectionButton: {
+        padding: 8,
+    },
+
+
+    // Estilos de Carga de Fotos (Sin cambios)
+    photoUploadContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        width: '100%',
+        marginTop: 15,
+        marginBottom: 10,
     },
     photoInputGroup: {
-        alignItems: 'center', // Centra el botón y la previsualización verticalmente
-        flex: 1, // Permite que cada grupo ocupe espacio disponible
-        marginHorizontal: 5, // Espacio entre los grupos de fotos
+        alignItems: 'center',
+        flex: 1,
+        marginHorizontal: 5,
     },
     photoButton: {
         backgroundColor: '#1e1e1e',
@@ -310,19 +426,19 @@ const styles = StyleSheet.create({
         padding: 15,
         alignItems: 'center',
         justifyContent: 'center',
-        width: '100%', // Ocupa el ancho del grupo
-        marginBottom: 10, // Espacio entre el botón y la previsualización
+        width: '100%',
+        marginBottom: 10,
     },
     photoButtonText: {
         color: '#fff',
-        marginTop: 5, // Espacio entre el icono y el texto
+        marginTop: 5,
         fontSize: 14,
     },
     photoPreview: {
-        width: '100%', // Ocupa el ancho del grupo
-        aspectRatio: 1, // Mantiene un aspect ratio cuadrado (ajusta si es necesario)
+        width: '100%',
+        aspectRatio: 1,
         borderRadius: 10,
-        backgroundColor: '#2a2a2a', // Fondo oscuro mientras carga o si no hay imagen
-        resizeMode: 'cover', // Cubre el área manteniendo el aspect ratio
+        backgroundColor: '#2a2a2a',
+        resizeMode: 'cover',
     },
 });
