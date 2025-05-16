@@ -1,94 +1,65 @@
-import { Tabs } from 'expo-router';
+// app/_layout.tsx (Layout de la raíz)
+// Este archivo define el navegador principal para toda tu aplicación.
+// Generalmente se usa un Stack navigator aquí.
+import { Stack } from 'expo-router';
 import React from 'react';
-// Importamos el componente TabBarIcon desde nuestra carpeta local de componentes.
-// La ruta '@/' asume que tienes configurado un alias en tu proyecto (por ejemplo, en tsconfig.json o babel.config.js)
-// que apunta a la raíz de tu proyecto o a la carpeta `src`.
-import { TabBarIcon } from '@/components/navigation/TabBarIcon';
-// Importamos la configuración de colores de tu proyecto.
-import { Colors } from '@/constants/Colors';
-// Hook para detectar el esquema de color del sistema (claro u oscuro).
-import { useColorScheme } from '@/hooks/useColorScheme';
 
-// Este componente define la estructura de pestañas de tu aplicación.
-export default function TabLayout() {
-    // Obtenemos el esquema de color actual.
-    const colorScheme = useColorScheme();
-
+// Este es el componente principal del layout de la raíz.
+export default function RootLayout() {
     return (
-        // El componente Tabs envuelve todas las pantallas que serán pestañas.
-        <Tabs
-            screenOptions={{
-                // Define el color activo de los iconos y texto de las pestañas según el tema.
-                tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-                // Oculta el encabezado por defecto para todas las pantallas dentro de estas pestañas.
-                // Si quisieras un encabezado en alguna pestaña específica, podrías poner headerShown: true
-                // en las options de esa Tabs.Screen particular.
-                headerShown: false,
-                // Estilos para la barra inferior de pestañas.
-                tabBarStyle: {
-                    backgroundColor: '#1e1e1e', // Fondo oscuro
-                    borderTopColor: '#2a2a2a', // Borde superior sutil para separación
-                },
-                // Color para los iconos y texto de las pestañas que no están activas.
-                tabBarInactiveTintColor: '#aaa',
-            }}
-        >
-            {/* Definición de cada pestaña */}
-
-            {/* Pestaña de Ofertas */}
-            <Tabs.Screen
-                // 'offers' debe coincidir con el nombre del archivo de la pantalla (ej: app/(tabs)/offers.tsx).
-                name="offers"
-                options={{
-                    title: 'Ofertas', // Título que se muestra debajo del icono en la barra de pestañas.
-                    // Función para renderizar el icono de la pestaña.
-                    tabBarIcon: ({ color, focused }) => (
-                        // Usamos tu componente TabBarIcon, pasándole el nombre del icono y el color.
-                        // Cambiamos el nombre del icono si la pestaña está enfocada (activa).
-                        <TabBarIcon name={focused ? 'bookmark' : 'bookmark-outline'} color={color} />
-                    ),
-                }}
-            />
-
-            {/* Pestaña de Mapa (asumiendo que 'index' es tu pantalla principal o mapa) */}
-            <Tabs.Screen
-                // 'index' típicamente se refiere al archivo index.tsx en el directorio (ej: app/(tabs)/index.tsx).
-                name="index"
-                options={{
-                    title: 'Mapa', // Título para la pestaña del mapa.
-                    tabBarIcon: ({ color, focused }) => (
-                        <TabBarIcon name={focused ? 'map' : 'map-outline'} color={color} />
-                    ),
-                }}
-            />
-
-            {/* Pestaña de Perfil */}
-            <Tabs.Screen
-                // 'profile' debe coincidir con el nombre del archivo (ej: app/(tabs)/profile.tsx).
-                name="profile"
-                options={{
-                    title: 'Perfil', // Título para la pestaña de perfil.
-                    tabBarIcon: ({ color, focused }) => (
-                        <TabBarIcon name={focused ? 'person' : 'person-outline'} color={color} />
-                    ),
-                }}
-            />
+        // El componente Stack crea un navegador de pila.
+        // Cada Stack.Screen define una pantalla o un grupo de pantallas
+        // a las que se puede navegar desde este Stack.
+        <Stack>
+            {/*
+        Stack.Screen name="(tabs)"
+        Esto le dice al Stack que existe un grupo de rutas definido
+        en la carpeta `(tabs)` (app/(tabs)).
+        Cuando navegas a este grupo (ej: router.push('/(tabs)')),
+        el control pasa al layout definido en `app/(tabs)/_layout.tsx`.
+        options={{ headerShown: false }} oculta el encabezado del Stack
+        cuando estás dentro de este grupo (ya que tu navegador de pestañas
+        probablemente no necesita un encabezado adicional del Stack).
+      */}
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 
             {/*
-                Manejo de la pantalla not-found.tsx:
-                Si tienes un archivo +not-found.tsx dentro de la carpeta (tabs),
-                esta configuración asegura que no aparezca como una pestaña visible
-                y no tenga un botón en la barra de pestañas.
-                Hemos eliminado 'href: null' ya que no es compatible con 'tabBarButton'.
-            */}
-            <Tabs.Screen
-                name="+not-found" // Nombre del archivo: +not-found.tsx
-                options={{
-                    // Eliminamos href: null aquí
-                    tabBarButton: () => null, // Oculta completamente el botón/icono de esta pestaña en la barra.
-                }}
-            />
+        Stack.Screen name="(auth)"
+        Similar al anterior, esto le dice al Stack que existe un grupo de rutas
+        para autenticación definido en la carpeta `(auth)` (app/(auth)).
+        Cuando navegas a este grupo (ej: router.push('/(auth)/login')),
+        el control pasa al layout definido en `app/(auth)/_layout.tsx` (si existe)
+        o directamente a las pantallas dentro de `(auth)`.
+        options={{ headerShown: false }} oculta el encabezado del Stack
+        cuando estás en las pantallas de autenticación (login/signup).
+      */}
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
 
-        </Tabs>
+            {/*
+        Aquí puedes añadir otras pantallas o grupos de rutas de nivel superior
+        si las tienes. Por ejemplo, si moviste tus archivos de eventos a `app/events/`:
+        <Stack.Screen name="events" options={{ headerShown: false }} />
+        Esto permitiría navegar al grupo de eventos. El layout dentro de `app/events`
+        (si existe) manejaría la navegación dentro de ese grupo.
+
+        Si tus archivos de eventos (`eventos_delirium.tsx`, `eventos_gaudi.tsx`)
+        están directamente en la carpeta `app` (no dentro de `(tabs)` ni `(auth)`
+        ni `events`), entonces los definirías aquí directamente:
+        <Stack.Screen name="eventos_delirium" options={{ title: 'Eventos Delirium' }} />
+        <Stack.Screen name="eventos_gaudi" options={{ title: 'Eventos Gaudi' }} />
+        (Pero por cómo estructuraste las pestañas, parece que están en un grupo separado).
+      */}
+
+            {/*
+        Stack.Screen name="+not-found"
+        Esto define la pantalla que se muestra cuando `expo-router` no encuentra una ruta.
+        Si tu archivo `+not-found.tsx` está directamente en la carpeta `app`,
+        esta línea asegura que se pueda navegar a él cuando ocurra un error de ruta.
+        options={{ headerShown: false }} para que la pantalla de error no tenga encabezado.
+      */}
+            <Stack.Screen name="+not-found" options={{ headerShown: false }} />
+
+
+        </Stack>
     );
 }
