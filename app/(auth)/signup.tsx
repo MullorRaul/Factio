@@ -2,11 +2,12 @@
 import React, { useState } from 'react';
 import {
     View, Text, TextInput, TouchableOpacity,
-    StyleSheet, StatusBar, Alert, ActivityIndicator, ScrollView // Importa ScrollView para campos opcionales
+    StyleSheet, StatusBar, Alert, ActivityIndicator, ScrollView, Image // Importa Image para mostrar previsualización
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker'; // Importa ImagePicker
 
 // Define la URL base de tu backend usando la IP local de tu ordenador
 // ¡CAMBIA ESTO POR LA URL DE TU SERVIDOR DE PRODUCCIÓN CUANDO DESPLIEGUES!
@@ -22,6 +23,34 @@ export default function SignUpScreen() {
     const [orientacionSexual, setOrientacionSexual] = useState(''); // Estado para Orientacion_sexual (opcional)
     const [isLoading, setIsLoading] = useState(false); // Estado para indicador de carga
 
+    // Nuevos estados para las fotos
+    const [foto1Uri, setFoto1Uri] = useState<string | null>(null); // URI de la primera foto seleccionada
+    const [foto2Uri, setFoto2Uri] = useState<string | null>(null); // URI de la segunda foto seleccionada
+
+    // Función para seleccionar una imagen
+    const pickImage = async (setFotoUri: React.Dispatch<React.SetStateAction<string | null>>) => {
+        // Solicitar permisos de la galería
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert('Permisos requeridos', 'Necesitamos permisos para acceder a tu galería de fotos.');
+            return;
+        }
+
+        // Abrir la galería para seleccionar una imagen
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images, // Solo imágenes
+            allowsEditing: true, // Permite editar/recortar la imagen seleccionada
+            aspect: [4, 3], // Aspect ratio opcional
+            quality: 1, // Calidad de la imagen (0 a 1)
+        });
+
+        // Si el usuario no canceló y seleccionó una imagen
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+            const selectedAsset = result.assets[0];
+            setFotoUri(selectedAsset.uri); // Guarda la URI de la imagen seleccionada
+        }
+    };
+
 
     const handleSignUp = async () => {
         // Validar campos requeridos (Email, Username, Password)
@@ -32,23 +61,63 @@ export default function SignUpScreen() {
 
         setIsLoading(true); // Inicia el indicador de carga
 
+        // Crear un objeto FormData para enviar datos mixtos (texto y archivos)
+        const formData = new FormData();
+
+        // Añadir campos de texto al FormData
+        formData.append('email', email);
+        formData.append('username', username);
+        formData.append('password', password);
+
+        // Añadir campos opcionales si tienen valor
+        if (edad && edad.trim() !== '') {
+            // Asegúrate de que el backend espera un número o una cadena
+            formData.append('edad', edad.trim()); // Enviamos como string, el backend puede parsear a int
+        }
+        if (estudiosTrabajo && estudiosTrabajo.trim() !== '') {
+            formData.append('estudios_trabajo', estudiosTrabajo.trim());
+        }
+        if (orientacionSexual && orientacionSexual.trim() !== '') {
+            formData.append('orientacion_sexual', orientacionSexual.trim());
+        }
+
+        // Añadir archivos de foto al FormData si se seleccionaron
+        // El nombre del campo ('foto1', 'foto2') debe coincidir con lo que espera Multer en el backend
+        if (foto1Uri) {
+            // Para FormData con archivos en React Native, necesitas crear un objeto con uri, name y type
+            const uriParts = foto1Uri.split('.');
+            const fileType = uriParts[uriParts.length - 1];
+            const fileName = `foto1_${Date.now()}.${fileType}`; // Genera un nombre de archivo único
+
+            formData.append('foto1', {
+                uri: foto1Uri,
+                name: fileName,
+                type: `image/${fileType}`, // Asegúrate de que el tipo MIME sea correcto
+            } as any); // Usamos 'as any' para evitar errores de tipo con FormData y archivos en RN
+        }
+
+        if (foto2Uri) {
+            const uriParts = foto2Uri.split('.');
+            const fileType = uriParts[uriParts.length - 1];
+            const fileName = `foto2_${Date.now()}.${fileType}`;
+
+            formData.append('foto2', {
+                uri: foto2Uri,
+                name: fileName,
+                type: `image/${fileType}`,
+            } as any);
+        }
+
+
         try {
             // Llama a la ruta de registro de usuario en tu backend
             const response = await fetch(`${API_BASE_URL}/usuarios/signup`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                // Envía todos los campos, incluyendo los opcionales si tienen valor
-                body: JSON.stringify({
-                    email,
-                    username,
-                    password,
-                    // Incluye campos opcionales solo si tienen valor y no son solo espacios
-                    ...(edad && edad.trim() !== '' && { edad: parseInt(edad, 10) }), // Convertir edad a número si se proporciona y no está vacío
-                    ...(estudiosTrabajo && estudiosTrabajo.trim() !== '' && { estudios_trabajo: estudiosTrabajo.trim() }),
-                    ...(orientacionSexual && orientacionSexual.trim() !== '' && { orientacion_sexual: orientacionSexual.trim() }),
-                }),
+                // ¡IMPORTANTE! No establezcas el 'Content-Type' a 'multipart/form-data' manualmente.
+                // Cuando envías un objeto FormData, el método fetch en navegadores y React Native
+                // lo establece automáticamente con el boundary correcto.
+                // headers: { 'Content-Type': 'multipart/form-data', ... }, // <-- NO HACER ESTO
+                body: formData, // Envía el objeto FormData
             });
 
             const data = await response.json();
@@ -56,12 +125,7 @@ export default function SignUpScreen() {
             if (!response.ok) {
                 Alert.alert('Error al registrarse', data.error || 'Error desconocido.');
                 console.error('Error response data:', data);
-                // Considera limpiar solo la contraseña por seguridad en caso de error
-                setPassword('');
-                // Opcional: Limpiar campos opcionales si el registro falla
-                // setEdad('');
-                // setEstudiosTrabajo('');
-                // setOrientacionSexual('');
+                setPassword(''); // Limpiar contraseña por seguridad
                 return;
             }
 
@@ -75,18 +139,15 @@ export default function SignUpScreen() {
             setEdad('');
             setEstudiosTrabajo('');
             setOrientacionSexual('');
+            setFoto1Uri(null); // Limpiar URIs de fotos
+            setFoto2Uri(null);
 
             router.replace('/(auth)/login'); // Navega a la pantalla de login
 
         } catch (error: any) {
             console.error('Error durante la petición de signup:', error);
             Alert.alert('Error de conexión', 'No se pudo conectar con el servidor. Asegúrate de que el backend está corriendo y la IP es correcta.');
-            // Limpiar solo la contraseña en caso de error de conexión también
-            setPassword('');
-            // Opcional: Limpiar campos opcionales en caso de error de conexión
-            // setEdad('');
-            // setEstudiosTrabajo('');
-            // setOrientacionSexual('');
+            setPassword(''); // Limpiar contraseña
         } finally {
             setIsLoading(false); // Detiene el indicador de carga
         }
@@ -98,99 +159,75 @@ export default function SignUpScreen() {
             <StatusBar barStyle="light-content" />
             <Text style={styles.title}>Factio</Text>
 
-            {/* Email (Requerido) */}
+            {/* Campos de texto (Sin cambios) */}
             <Text style={styles.label}>Email</Text>
             <View style={styles.inputContainer}>
                 <Icon name="email-outline" size={20} color="#aaa" />
-                <TextInput
-                    placeholder="yourname@gmail.com"
-                    placeholderTextColor="#aaa"
-                    style={styles.input}
-                    keyboardType="email-address"
-                    value={email}
-                    onChangeText={setEmail}
-                    autoCapitalize="none"
-                />
+                <TextInput placeholder="yourname@gmail.com" placeholderTextColor="#aaa" style={styles.input} keyboardType="email-address" value={email} onChangeText={setEmail} autoCapitalize="none" />
             </View>
 
-            {/* Username (Requerido) */}
             <Text style={styles.label}>Username</Text>
             <View style={styles.inputContainer}>
                 <Icon name="account-outline" size={20} color="#aaa" />
-                <TextInput
-                    placeholder="@yourusername"
-                    placeholderTextColor="#aaa"
-                    style={styles.input}
-                    value={username}
-                    onChangeText={setUsername}
-                    autoCapitalize="none"
-                />
+                <TextInput placeholder="@yourusername" placeholderTextColor="#aaa" style={styles.input} value={username} onChangeText={setUsername} autoCapitalize="none" />
             </View>
 
-            {/* Password (Requerido) */}
             <Text style={styles.label}>Contraseña</Text>
             <View style={styles.inputContainer}>
                 <Icon name="lock-outline" size={20} color="#aaa" />
-                <TextInput
-                    placeholder="********"
-                    placeholderTextColor="#aaa"
-                    secureTextEntry
-                    style={styles.input}
-                    value={password}
-                    onChangeText={setPassword}
-                />
+                <TextInput placeholder="********" placeholderTextColor="#aaa" secureTextEntry style={styles.input} value={password} onChangeText={setPassword} />
             </View>
 
-            {/* Edad (Opcional) */}
             <Text style={styles.label}>Edad (Opcional)</Text>
             <View style={styles.inputContainer}>
                 <Icon name="numeric" size={20} color="#aaa" />
-                <TextInput
-                    placeholder="Ej: 25"
-                    placeholderTextColor="#aaa"
-                    style={styles.input}
-                    keyboardType="numeric" // Solo números
-                    value={edad}
-                    onChangeText={setEdad}
-                />
+                <TextInput placeholder="Ej: 25" placeholderTextColor="#aaa" style={styles.input} keyboardType="numeric" value={edad} onChangeText={setEdad} />
             </View>
 
-            {/* Estudios/Trabajo (Opcional) */}
             <Text style={styles.label}>Estudios / Trabajo (Opcional)</Text>
             <View style={styles.inputContainer}>
                 <Icon name="school-outline" size={20} color="#aaa" />
-                <TextInput
-                    placeholder="Ej: Estudiante, Ingeniero"
-                    placeholderTextColor="#aaa"
-                    style={styles.input}
-                    value={estudiosTrabajo}
-                    onChangeText={setEstudiosTrabajo}
-                />
+                <TextInput placeholder="Ej: Estudiante, Ingeniero" placeholderTextColor="#aaa" style={styles.input} value={estudiosTrabajo} onChangeText={setEstudiosTrabajo} />
             </View>
 
-            {/* Orientación Sexual (Opcional) */}
             <Text style={styles.label}>Orientación Sexual (Opcional)</Text>
             <View style={styles.inputContainer}>
                 <Icon name="gender-male-female" size={20} color="#aaa" />
-                <TextInput
-                    placeholder="Ej: Heterosexual"
-                    placeholderTextColor="#aaa"
-                    style={styles.input}
-                    value={orientacionSexual}
-                    onChangeText={setOrientacionSexual}
-                />
+                <TextInput placeholder="Ej: Heterosexual" placeholderTextColor="#aaa" style={styles.input} value={orientacionSexual} onChangeText={setOrientacionSexual} />
+            </View>
+
+            {/* Sección de Carga de Fotos */}
+            <Text style={styles.label}>Fotos (Opcional)</Text>
+            <View style={styles.photoUploadContainer}>
+                {/* Botón y previsualización para Foto 1 */}
+                <View style={styles.photoInputGroup}>
+                    <TouchableOpacity style={styles.photoButton} onPress={() => pickImage(setFoto1Uri)}>
+                        <Icon name="camera-plus-outline" size={24} color="#fff" />
+                        <Text style={styles.photoButtonText}>Foto 1</Text>
+                    </TouchableOpacity>
+                    {foto1Uri && (
+                        <Image source={{ uri: foto1Uri }} style={styles.photoPreview} />
+                    )}
+                </View>
+
+                {/* Botón y previsualización para Foto 2 */}
+                <View style={styles.photoInputGroup}>
+                    <TouchableOpacity style={styles.photoButton} onPress={() => pickImage(setFoto2Uri)}>
+                        <Icon name="camera-plus-outline" size={24} color="#fff" />
+                        <Text style={styles.photoButtonText}>Foto 2</Text>
+                    </TouchableOpacity>
+                    {foto2Uri && (
+                        <Image source={{ uri: foto2Uri }} style={styles.photoPreview} />
+                    )}
+                </View>
             </View>
 
 
             {/* Botón Sign Up */}
             <LinearGradient colors={['#e14eca','#f4524d']} style={styles.button}>
-                <TouchableOpacity
-                    onPress={handleSignUp}
-                    disabled={isLoading} // Deshabilita si está cargando
-                    style={{ alignItems: 'center', width: '100%' }} // Asegura que el contenido esté centrado
-                >
+                <TouchableOpacity onPress={handleSignUp} disabled={isLoading} style={{ alignItems: 'center', width: '100%' }}>
                     {isLoading ? (
-                        <ActivityIndicator color="#fff" /> // Indicador de carga
+                        <ActivityIndicator color="#fff" />
                     ) : (
                         <Text style={styles.buttonText}>Registrarse</Text>
                     )}
@@ -223,7 +260,7 @@ const styles = StyleSheet.create({
     // Añade un estilo para el contenido dentro del ScrollView
     scrollContainer: {
         flexGrow: 1, // Permite que el contenido crezca
-        justifyContent: 'center', // Centra el contenido verticalmente si hay espacio
+        // justifyContent: 'center', // Puedes quitar esto si prefieres que el contenido empiece desde arriba
         alignItems: 'center',
         padding: 20,
         paddingTop: 50, // Añade un poco de padding arriba si es necesario
@@ -235,7 +272,7 @@ const styles = StyleSheet.create({
         // Elimina alignItems y justifyContent de aquí si los pones en scrollContainer
     },
     title: { fontSize: 36, color: '#fff', fontWeight: 'bold', marginBottom: 30 },
-    label: { color: '#fff', alignSelf: 'flex-start', marginLeft: 10, marginTop: 10, fontSize: 14 },
+    label: { color: '#fff', alignSelf: 'flex-start', marginLeft: 10, marginTop: 15, fontSize: 14 }, // Ajustado marginTop
     inputContainer: {
         flexDirection: 'row',
         backgroundColor: '#1e1e1e',
@@ -246,11 +283,46 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     input: { flex: 1, color: '#fff', paddingVertical: 0, marginLeft: 10 },
-    button: { marginTop: 20, width: '100%', padding: 15, borderRadius: 10, alignItems: 'center' },
+    button: { marginTop: 25, width: '100%', padding: 15, borderRadius: 10, alignItems: 'center' }, // Ajustado marginTop
     buttonText: { color: '#fff', fontWeight: 'bold' },
     orText: { color: '#aaa', marginTop: 20 },
     socialRow: { flexDirection: 'row', marginTop: 10 },
     socialButton: { backgroundColor: '#1e1e1e', padding: 12, borderRadius: 10, marginHorizontal: 5 },
     switchLink: { marginTop: 20 },
     switchText: { color: '#aaa', textDecorationLine: 'underline' },
+
+    // Nuevos estilos para la carga de fotos
+    photoUploadContainer: {
+        flexDirection: 'row', // Organiza los grupos de fotos horizontalmente
+        justifyContent: 'space-around', // Distribuye el espacio alrededor de los elementos
+        width: '100%',
+        marginTop: 10,
+        marginBottom: 10, // Espacio después de la sección de fotos
+    },
+    photoInputGroup: {
+        alignItems: 'center', // Centra el botón y la previsualización verticalmente
+        flex: 1, // Permite que cada grupo ocupe espacio disponible
+        marginHorizontal: 5, // Espacio entre los grupos de fotos
+    },
+    photoButton: {
+        backgroundColor: '#1e1e1e',
+        borderRadius: 10,
+        padding: 15,
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '100%', // Ocupa el ancho del grupo
+        marginBottom: 10, // Espacio entre el botón y la previsualización
+    },
+    photoButtonText: {
+        color: '#fff',
+        marginTop: 5, // Espacio entre el icono y el texto
+        fontSize: 14,
+    },
+    photoPreview: {
+        width: '100%', // Ocupa el ancho del grupo
+        aspectRatio: 1, // Mantiene un aspect ratio cuadrado (ajusta si es necesario)
+        borderRadius: 10,
+        backgroundColor: '#2a2a2a', // Fondo oscuro mientras carga o si no hay imagen
+        resizeMode: 'cover', // Cubre el área manteniendo el aspect ratio
+    },
 });

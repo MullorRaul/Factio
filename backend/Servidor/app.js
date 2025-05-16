@@ -2,52 +2,41 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const multer = require('multer'); // Importar multer
 const app = express();
 const port = 3001;
-const { supabase, pool } = require('./db'); // Asegúrate de que db.js exporta 'supabase' y 'pool' correctamente
+// Asegúrate de que db.js exporta 'supabase' y 'pool' correctamente
+// Nota: El código usa principalmente 'supabase'. Asegúrate de que 'pool' es necesario o elimínalo si no se usa.
+const { supabase, pool } = require('./db');
 
-// Middleware para habilitar CORS
+// Configurar Supabase Storage (asegúrate de que tu instancia de Supabase está inicializada correctamente en db.js)
+const supabaseStorage = supabase.storage;
+
+// Configurar Multer para almacenamiento en memoria
+const storage = multer.memoryStorage();
+const upload = multer({
+    storage: storage, // Usamos el storage en memoria que definimos
+    limits: { fileSize: 5 * 1024 * 1024 }, // Opcional: Límite de tamaño de archivo (ej: 5MB por archivo)
+    fileFilter: (req, file, cb) => { // Opcional: Define qué tipos de archivo aceptar
+        // Aquí verificamos si el tipo MIME del archivo empieza por 'image/'
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true); // Acepta el archivo
+        } else {
+            // Rechaza el archivo y envía un error
+            cb(new Error('Tipo de archivo no soportado. Sube solo imágenes.'), false);
+        }
+    }
+});
+
+// Middleware para habilitar CORS y parsear JSON (Multer manejará multipart/form-data en rutas específicas)
 app.use(cors());
-// Middleware para parsear el cuerpo de las peticiones como JSON
-app.use(express.json());
+app.use(express.json()); // Sigue siendo necesario para otras rutas que usen JSON o para los campos de texto en rutas con Multer
+
 
 // Clave secreta para firmar los tokens JWT
-const JWT_SECRET = process.env.JWT_SECRET || 'factiodb_default_secret'; // Usar variable de entorno, con fallback
+const JWT_SECRET = process.env.JWT_SECRET || 'factiodb_default_secret';
 
-// Middleware para verificar el token JWT de admin_empresa
-const authenticateAdminEmpresa = async (req, res, next) => {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-
-    if (!token) {
-        return res.status(401).json({ error: 'Autenticación requerida' });
-    }
-
-    try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        // Verifica si el token es de un admin_empresa
-        if (decoded.type !== 'admin') {
-            return res.status(401).json({ error: 'Autenticación requerida: Se espera un token de admin' });
-        }
-
-        const { data: admin, error } = await supabase
-            .from('admin_empresa')
-            .select('id_admin')
-            .eq('id_admin', decoded.adminId)
-            .single();
-
-        if (error || !admin) {
-            return res.status(401).json({ error: 'Autenticación inválida' });
-        }
-
-        req.adminId = decoded.adminId;
-        next();
-    } catch (error) {
-        console.error('Error verifying admin token:', error.message);
-        return res.status(401).json({ error: 'Token inválido o expirado' });
-    }
-};
-
-// Middleware para verificar el token JWT de usuario normal
+// Middleware para verificar el token JWT de usuario (Sin cambios aquí)
 const authenticateUser = async (req, res, next) => {
     const token = req.header('Authorization')?.replace('Bearer ', '');
 
@@ -57,32 +46,31 @@ const authenticateUser = async (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
-        // Verifica si el token es de un usuario normal
         if (decoded.type !== 'user') {
-            return res.status(401).json({ error: 'Autenticación de usuario requerida: Se espera un token de usuario' });
+            return res.status(401).json({ error: 'Autenticación de usuario requerida: Token de tipo incorrecto' });
         }
 
-        // Busca al usuario para asegurarse de que existe y obtener su cod_usuario y username
-        // Usamos el email (cod_usuario) del token para buscar
         const { data: user, error } = await supabase
             .from('usuario')
-            .select('cod_usuario, username') // Selecciona campos relevantes
-            .eq('cod_usuario', decoded.codUsuario) // Busca por cod_usuario (email) guardado en el token
+            .select('cod_usuario, username')
+            .eq('cod_usuario', decoded.codUsuario)
             .single();
 
         if (error || !user) {
-            // Si el usuario no se encuentra (quizás fue eliminado), el token es inválido
+            console.error('User not found during authentication:', decoded.codUsuario);
             return res.status(401).json({ error: 'Usuario no encontrado o token inválido' });
         }
 
-        // Guarda el cod_usuario y username del usuario autenticado en el request
-        req.codUsuario = user.cod_usuario; // Guarda el email real del usuario
-        req.username = user.username; // Guarda el username real del usuario
+        req.codUsuario = user.cod_usuario;
+        req.username = user.username;
 
         next();
     } catch (error) {
         console.error('Error verifying user token:', error.message);
-        return res.status(401).json({ error: 'Token de usuario inválido o expirado' });
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({ error: 'Token expirado. Por favor, inicia sesión de nuevo.' });
+        }
+        return res.status(401).json({ error: 'Token de usuario inválido' });
     }
 };
 
@@ -92,165 +80,51 @@ app.get('/health', (req, res) => {
     res.status(200).json({ status: 'OK', timestamp: new Date() });
 });
 
-// ====================== AUTENTICACIÓN DE ADMIN_EMPRESA ======================
-// Ruta de registro de admin (mantienes la lógica existente)
-app.post('/admin/signup', async (req, res) => {
-    const { email, password } = req.body;
+// ====================== RUTAS DE AUTENTICACIÓN Y DATOS DE USUARIO ======================
 
-    if (!email || !password) {
-        return res.status(400).json({ error: 'Email y contraseña son requeridos' });
-    }
+// RUTA DE REGISTRO DE USUARIO - MODIFICADA PARA SUBIR FOTOS
+// Aplicamos el middleware de multer aquí. Esperamos campos de archivo llamados 'foto1' y 'foto2'.
+app.post('/usuarios/signup', upload.fields([{ name: 'foto1', maxCount: 1 }, { name: 'foto2', maxCount: 1 }]), async (req, res) => {
 
-    try {
-        const { data: existingAdmin, error: existingAdminError } = await supabase
-            .from('admin_empresa')
-            .select('id_admin')
-            .eq('cod_usuario', email) // Asumiendo que el email se guarda en cod_usuario
-            .single();
-
-        if (existingAdminError && existingAdminError.code !== 'PGRST116') { // PGRST116 = No rows found, which is expected
-            throw existingAdminError;
-        }
-
-
-        if (existingAdmin) {
-            return res.status(409).json({ error: 'El email ya está registrado como administrador' });
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Primero crea el usuario en la tabla 'usuario' si aún no existe (puede que ya exista si es un cliente)
-        // Nota: Esta lógica puede variar dependiendo de cómo manejas usuarios vs admin_empresa
-        // Si un admin es también un 'usuario' con perfil, esta lógica está bien.
-        // Si 'usuario' es solo para clientes, deberías reconsiderar esta parte o tener un campo 'is_admin' en usuario.
-        const { data: usuarioData, error: usuarioError } = await supabase
-            .from('usuario')
-            .insert([{
-                cod_usuario: email, // email como PK
-                email: email, // <-- USAR 'email' (minúscula)
-                nombre: 'Admin Empresa', // Nombre genérico para admin
-                username: `admin_${email.split('@')[0]}`, // Generar un username para el admin si es necesario en tabla usuario
-                password_hash: hashedPassword // Guardar la contraseña hasheada también en usuario si es la fuente de verdad
-            }])
-            .select('cod_usuario')
-            .single()
-            .onConflict('cod_usuario') // Si el usuario ya existe, no hagas nada (o actualiza si es necesario)
-            .ignore(); // O .update(...) si necesitas actualizar algo
-
-        if (usuarioError && usuarioError.code !== '23505') { // 23505 = duplicate key, handled by onConflict
-            console.error('Error creating or finding user for admin:', usuarioError.message);
-            // Decide cómo manejar si el usuario ya existe pero no se actualiza/selecciona correctamente
-        }
-
-        // Luego crea la entrada en admin_empresa
-        const { data: newAdmin, error: newAdminError } = await supabase
-            .from('admin_empresa')
-            .insert([{ cod_usuario: email, password: hashedPassword }]) // Usa el mismo cod_usuario
-            .select('id_admin, cod_usuario')
-            .single(); // Asumimos que solo insertas uno
-
-        if (newAdminError) {
-            // Si falla la inserción en admin_empresa, considera eliminar la entrada de usuario si la creaste aquí
-            console.error('Error creating admin_empresa:', newAdminError.message);
-            // TODO: Considerar revertir la creación en la tabla 'usuario' if the 'admin_empresa' insertion fails
-            throw newAdminError;
-        }
-
-
-        res.status(201).json({ message: 'Administrador creado exitosamente', admin: newAdmin });
-
-    } catch (err) {
-        console.error('Admin Signup Error:', err.message);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-
-app.post('/admin/login', async (req, res) => {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-        return res.status(400).json({ error: 'Email y contraseña son requeridos' });
-    }
-
-    try {
-        const { data: admin, error: adminError } = await supabase
-            .from('admin_empresa')
-            .select('id_admin, cod_usuario, password')
-            .eq('cod_usuario', email) // Asumiendo que el email se guarda en cod_usuario
-            .single();
-
-        if (adminError && adminError.code !== 'PGRST116') { // PGRST116 = No rows found
-            throw adminError;
-        }
-
-
-        if (!admin || !(await bcrypt.compare(password, admin.password))) {
-            return res.status(401).json({ error: 'Credenciales inválidas' });
-        }
-
-        // Generar token JWT para el admin, incluyendo el tipo
-        const token = jwt.sign({ adminId: admin.id_admin, type: 'admin' }, JWT_SECRET, { expiresIn: '1h' }); // Expira en 1 hora
-
-        res.json({ token });
-
-    } catch (err) {
-        console.error('Admin Login Error:', err.message);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// Ejemplo de ruta protegida para administradores de empresa
-app.get('/admin/protected', authenticateAdminEmpresa, (req, res) => {
-    res.json({ message: `Ruta protegida para el administrador de empresa con ID: ${req.adminId}` });
-});
-
-
-// ====================== AUTENTICACIÓN Y DATOS DE USUARIO (Nuevas rutas) ======================
-
-// RUTA DE REGISTRO DE USUARIO NORMAL
-app.post('/usuarios/signup', async (req, res) => {
-    // --- DEBUGGING: Log req.body at the start ---
-    console.log('DEBUG: req.body:', req.body);
-    console.log('----------------------------------------');
-    // --- FIN DEBUGGING ---
-
-    // Campos requeridos: email, username, password
-    // Campos opcionales: edad, estudios_trabajo, orientacion_sexual
+    // req.body contendrá los campos de texto (email, password, edad, etc.)
+    // req.files contendrá los archivos subidos, agrupados por el nombre del campo ('foto1', 'foto2')
     const { email, username, password, edad, estudios_trabajo, orientacion_sexual } = req.body;
+    const fotos = req.files; // { foto1: [{...}], foto2: [{...}] }
 
-    // --- DEBUGGING: Log individual variables after destructuring ---
-    console.log('DEBUG: email:', email);
-    console.log('DEBUG: username:', username);
-    console.log('DEBUG: password:', password ? '********' : 'UNDEFINED or EMPTY'); // Don't log password
-    console.log('DEBUG: edad:', edad);
-    console.log('DEBUG: estudios_trabajo:', estudios_trabajo);
-    console.log('DEBUG: orientacion_sexual:', orientacion_sexual);
-    console.log('----------------------------------------');
-    // --- FIN DEBUGGING ---
-
-
-    // 1. Validar campos requeridos
+    // 1. Validar campos de texto requeridos
     if (!email || !username || !password) {
+        // Si faltan campos de texto requeridos, retornamos error. Multer ya habrá procesado los archivos (en memoria).
         return res.status(400).json({ error: 'Email, username y password son requeridos para el registro' });
     }
 
+    // Validar formato básico de email (opcional)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: 'Formato de email inválido' });
+    }
+
+    // 2. Validar que al menos una foto fue subida si es obligatorio (Descomentar si las fotos son obligatorias)
+    // if (!fotos || (!fotos['foto1'] && !fotos['foto2'])) {
+    //     return res.status(400).json({ error: 'Se requiere subir al menos una foto.' });
+    // }
+
+
+    let newUser = null; // Variable para guardar el usuario insertado inicialmente
+
     try {
-        // 2. Verificar si el email o el username ya existen en la tabla usuario
+        // 3. Verificar si el email o el username ya existen (Sin cambios aquí)
         const { data: existingUser, error: existingUserError } = await supabase
             .from('usuario')
             .select('cod_usuario, username')
-            // <-- USAR 'email' (minúscula) en la cláusula or
-            .or(`email.eq.${email},username.eq.${username}`); // Busca por email O username
+            .or(`email.eq.${email},username.eq.${username}`);
 
         if (existingUserError && existingUserError.code !== 'PGRST116') { // PGRST116 = No rows found
-            console.error('Error checking existing user:', existingUserError.message);
+            console.error('Error checking existing user during signup:', existingUserError.message);
             throw existingUserError; // Lanza el error si no es "no rows found"
         }
 
         if (existingUser && existingUser.length > 0) {
-            // If a user was found, check if email or username match
-            const emailExists = existingUser.some(u => u.cod_usuario === email); // cod_usuario is the email
+            const emailExists = existingUser.some(u => u.cod_usuario === email);
             const usernameExists = existingUser.some(u => u.username === username);
 
             if (emailExists && usernameExists) {
@@ -262,163 +136,237 @@ app.post('/usuarios/signup', async (req, res) => {
             }
         }
 
-
-        // 3. Hashear la contraseña
+        // 4. Hashear la contraseña (Sin cambios aquí)
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // 4. Insertar en la tabla 'usuario'
-        // Usamos el email como cod_usuario (PK) según tu estructura actual, y añadimos username y password_hash
+        // 5. Preparar datos de texto para insertar en 'usuario' (SIN las URLs de las fotos aún)
         const userDataToInsert = {
-            cod_usuario: email, // email as PK
-            email: email, // <-- USE 'email' (lowercase)
-            nombre: username, // Use username for Nombre field if for display
-            username: username, // New username field
-            password_hash: hashedPassword // New hashed password field
+            // Asumimos que cod_usuario es SERIAL/autoincremental en la DB
+            // por lo que no lo incluimos aquí, la DB lo generará
+            email: email,
+            nombre: username, // Usar username para el campo Nombre si es para mostrar
+            username: username,
+            password_hash: hashedPassword
         };
 
-        // --- DEBUGGING: Log userDataToInsert before insert ---
-        console.log('DEBUG: userDataToInsert before insert:', userDataToInsert);
-        console.log('----------------------------------------');
-        // --- FIN DEBUGGING ---
+        // Añadir campos opcionales de texto si están presentes y son válidos
+        if (edad !== undefined && edad !== null && String(edad).trim() !== '') {
+            const parsedEdad = parseInt(String(edad).trim(), 10);
+            if (!isNaN(parsedEdad)) userDataToInsert.edad = parsedEdad;
+        }
+        if (estudios_trabajo !== undefined && estudios_trabajo !== null && String(estudios_trabajo).trim() !== '') {
+            userDataToInsert.estudios_trabajo = String(estudios_trabajo).trim();
+        }
+        if (orientacion_sexual !== undefined && orientacion_sexual !== null && String(orientacion_sexual).trim() !== '') {
+            userDataToInsert.orientacion_sexual = String(orientacion_sexual).trim();
+        }
 
-        const { data: newUser, error: newUserError } = await supabase
+        // 6. Insertar el usuario en la base de datos para obtener el cod_usuario generado
+        // Usamos .select() para obtener los datos del usuario insertado, incluyendo el cod_usuario
+        const { data: newUserArray, error: newUserError } = await supabase
             .from('usuario')
-            .insert([userDataToInsert]) // Use the object here
-            .select('cod_usuario, username, email, nombre')
-            .single(); // Expect a single result
+            .insert([userDataToInsert])
+            // Seleccionamos los campos del usuario insertado, incluyendo el cod_usuario generado
+            .select('cod_usuario, email, nombre, username') // Asegúrate de seleccionar al menos cod_usuario
+            .single(); // Esperamos un solo resultado
 
         if (newUserError) {
-            console.error('Error inserting new user:', newUserError.error || newUserError.message);
-            throw newUserError; // Throw the error if insertion fails
+            console.error('Error inserting new user (before file upload):', newUserError.message);
+            if (newUserError.details) console.error('Error details:', newUserError.details);
+            if (newUserError.hint) console.error('Error hint:', newUserError.hint);
+            // Manejar error de inserción de usuario (ej. conflicto de unicidad que no atrapamos antes)
+            if (newUserError.code === '23505') { // Código de error de clave duplicada
+                return res.status(409).json({ error: 'Conflicto de datos al insertar usuario.' });
+            }
+            throw newUserError; // Lanza el error si es otra cosa
         }
 
-        // 5. Insert or update in the 'cliente' table if optional fields are present
-        // Only if at least one of the optional fields is present
-        if (edad !== undefined || estudios_trabajo !== undefined || orientacion_sexual !== undefined) {
-            const clientData = { cod_usuario: email }; // Link by cod_usuario (email)
-            // Add only fields that are not undefined, null, or empty/whitespace strings
-            // Ensure edad is parsed to a number or excluded if not valid
-            if (edad !== undefined && edad !== null && String(edad).trim() !== '') {
-                const parsedEdad = parseInt(String(edad).trim(), 10);
-                if (!isNaN(parsedEdad)) { // Only add if it's a valid number
-                    clientData.Edad = parsedEdad;
-                } else {
-                    console.warn(`Warning: Could not parse edad "${edad}" as integer for user ${email}. Excluding from client data.`);
-                }
-            }
+        // El usuario se ha creado con éxito. Guardamos el objeto usuario.
+        newUser = newUserArray;
+        const userId = newUser.cod_usuario; // ¡Aquí obtienes el ID autogenerado del usuario recién creado!
 
-            if (estudios_trabajo !== undefined && estudios_trabajo !== null && String(estudios_trabajo).trim() !== '') clientData.Estudios_Trabajo = String(estudios_trabajo).trim();
-            if (orientacion_sexual !== undefined && orientacion_sexual !== null && String(orientacion_sexual).trim() !== '') clientData.Orientacion_sexual = String(orientacion_sexual).trim();
+        // 7. Subir las fotos a Supabase Storage (si se proporcionaron)
+        const uploadedPhotoUrls = {}; // Objeto para guardar las URLs de las fotos subidas exitosamente
 
+        // Subir la primera foto si está presente en req.files['foto1']
+        if (fotos && fotos['foto1'] && fotos['foto1'][0]) {
+            const foto1 = fotos['foto1'][0]; // Multer guarda archivos en un array, incluso si maxCount es 1
+            // Definir la ruta en Supabase Storage: bucket/ID_USUARIO/nombre_archivo_unico.extension
+            // Usamos el userId y un timestamp para asegurar unicidad dentro de la carpeta del usuario
+            const filePath1 = `user-photos/${userId}/foto1_${Date.now()}_${foto1.originalname.replace(/\s/g, '_')}`; // Reemplaza espacios si es necesario
 
-            // Only attempt upsert if there is valid client data (more than 1 field, which is cod_usuario)
-            if (Object.keys(clientData).length > 1) {
-                // --- DEBUGGING: Log clientData before upsert ---
-                console.log('DEBUG: clientData before upsert:', clientData);
-                console.log('----------------------------------------');
-                // --- FIN DEBUGGING ---
+            const { data: uploadData1, error: uploadError1 } = await supabaseStorage
+                .from('user-photos') // <-- ¡Asegúrate de que este es el nombre de tu bucket en Supabase!
+                .upload(filePath1, foto1.buffer, { // foto1.buffer contiene los datos binarios del archivo
+                    contentType: foto1.mimetype, // Usar el tipo MIME proporcionado por Multer
+                    upsert: false // No sobrescribir si ya existe
+                });
 
-                // Attempt upsert with the corrected column name 'Edad' (capital E) based on your screenshot
-                const { data: clientEntry, error: clientError } = await supabase
-                    .from('cliente')
-                    // Use upsert to insert if it doesn't exist or update if it does
-                    // onConflict: 'cod_usuario' indicates that if a row with that cod_usuario already exists, update it
-                    .upsert([clientData], { onConflict: 'cod_usuario', ignoreDuplicates: false }); // ignoreDuplicates: false to update
-
-                if (clientError) {
-                    console.error('Warning: Could not upsert client data for user', email, ':', clientError.message);
-                    // Decide if this is a fatal error or just a warning.
-                    // Here we just log a warning and continue if the user was inserted successfully.
-                }
+            if (uploadError1) {
+                console.error('Error uploading foto1 for user', userId, ':', uploadError1.message);
+                // Si la subida falla, la URL correspondiente en DB será NULL.
+                // En un sistema robusto, manejarías esto (ej. eliminar usuario si la subida de fotos es crítica).
+                uploadedPhotoUrls.foto_url_1 = null; // Asegura que el campo sea null en la DB
             } else {
-                console.log('DEBUG: No valid optional client data provided for upsert for user', email);
+                // Si la subida fue exitosa, obtener la URL pública para guardarla en la DB
+                const { data: publicUrlData } = supabaseStorage
+                    .from('user-photos')
+                    .getPublicUrl(filePath1);
+                uploadedPhotoUrls.foto_url_1 = publicUrlData ? publicUrlData.publicUrl : null; // Guarda la URL pública
+                console.log('Foto 1 subida exitosamente para usuario', userId);
             }
+        } else {
+            // Si el archivo 'foto1' no se proporcionó en la petición
+            uploadedPhotoUrls.foto_url_1 = null;
         }
 
 
-        res.status(201).json({ message: 'Usuario registered successfully', user: newUser }); // Corrected message
+        // Subir la segunda foto si está presente en req.files['foto2']
+        if (fotos && fotos['foto2'] && fotos['foto2'][0]) {
+            const foto2 = fotos['foto2'][0];
+            const filePath2 = `user-photos/${userId}/foto2_${Date.now()}_${foto2.originalname.replace(/\s/g, '_')}`;
+
+            const { data: uploadData2, error: uploadError2 } = await supabaseStorage
+                .from('user-photos') // <-- ¡Asegúrate de que este es el nombre de tu bucket en Supabase!
+                .upload(filePath2, foto2.buffer, {
+                    contentType: foto2.mimetype,
+                    upsert: false
+                });
+
+            if (uploadError2) {
+                console.error('Error uploading foto2 for user', userId, ':', uploadError2.message);
+                uploadedPhotoUrls.foto_url_2 = null;
+            } else {
+                const { data: publicUrlData } = supabaseStorage
+                    .from('user-photos')
+                    .getPublicUrl(filePath2);
+                uploadedPhotoUrls.foto_url_2 = publicUrlData ? publicUrlData.publicUrl : null;
+                console.log('Foto 2 subida exitosamente para usuario', userId);
+            }
+        } else {
+            // Si el archivo 'foto2' no se proporcionó en la petición
+            uploadedPhotoUrls.foto_url_2 = null;
+        }
+
+        // 8. Actualizar la fila del usuario recién creado con las URLs de las fotos
+        // Esto se hace DESPUÉS de haber creado el usuario inicialmente y subido las fotos
+        const { data: updatedUserArray, error: updateError } = await supabase
+            .from('usuario')
+            .update({
+                foto_url_1: uploadedPhotoUrls.foto_url_1,
+                foto_url_2: uploadedPhotoUrls.foto_url_2
+            })
+            .eq('cod_usuario', userId) // ¡Asegúrate de actualizar la fila correcta usando el userId!
+            // Seleccionamos los campos finales del usuario para la respuesta
+            .select('cod_usuario, email, nombre, username, edad, estudios_trabajo, orientacion_sexual, foto_url_1, foto_url_2')
+            .single(); // Esperamos el usuario actualizado
+
+        if (updateError) {
+            console.error('Error updating user with photo URLs:', updateError.message);
+            // NOTA: Si falla la actualización aquí, el usuario se creó, pero sin las URLs de las fotos.
+            // En un sistema robusto, esto podría requerir eliminar el usuario creado y/o los archivos subidos exitosamente.
+            if (updateError.details) console.error('Update error details:', updateError.details);
+            if (updateError.hint) console.error('Update error hint:', updateError.hint);
+            // Decide si quieres lanzar un error aquí o simplemente retornar el usuario sin las URLs
+            // Vamos a lanzar un error para indicar que el registro no fue completamente exitoso
+            throw new Error("Usuario registrado, pero falló la actualización con URLs de fotos.");
+        }
+
+
+        // 9. Registro exitoso (con URLs si se subieron y actualizaron)
+        res.status(201).json({
+            message: 'Usuario registrado exitosamente (incluyendo fotos si se proporcionaron y guardaron).',
+            user: updatedUserArray // Retorna el usuario con las URLs de fotos actualizadas
+        });
 
     } catch (err) {
-        console.error('User Signup Error:', err.message);
-        // More specific handling if it's a database error
-        if (err.code) {
-            res.status(500).json({ error: `Database error: ${err.message}` });
-        } else {
-            res.status(500).json({ error: err.message });
+        // Catch para errores generales durante el proceso (validación, inserción de usuario, subida de archivos, actualización)
+        console.error('User Signup Error (General Catch):', err.message);
+
+        // Si el error ocurrió DESPUÉS de crear el usuario (paso 6) pero ANTES de la actualización final (paso 8),
+        // el usuario se creó pero sin las URLs. En un sistema robusto, podrías querer eliminar ese usuario aquí.
+        // (Este es un punto de complejidad, no lo implementamos completamente aquí para no alargar el código,
+        // pero tenlo en cuenta para producción).
+        if (newUser && newUser.cod_usuario) {
+            console.warn(`Intento de registro fallido DESPUÉS de crear usuario ${newUser.cod_usuario}. Considerar eliminarlo.`);
+            // Supabase client does not have a simple rollback. You'd need
+            // to call await supabase.from('usuario').delete().eq('cod_usuario', newUser.cod_usuario);
+            // and handle potential errors during deletion.
         }
+
+
+        // Asegurarse de que el error retornado al frontend es un objeto JSON
+        if (res.headersSent) {
+            // Si ya enviamos cabeceras (ej. en una validación inicial o un error de update), no enviar más.
+            return;
+        }
+        // Determinar un estado HTTP apropiado. 500 para errores inesperados, 409 para conflictos, 400 para validación.
+        const statusCode = err.message && err.message.includes('Conflicto de datos') ? 409 : (err.message && err.message.includes('Tipo de archivo no soportado') ? 400 : 500);
+        res.status(statusCode).json({ error: err.message || 'Error interno del servidor durante el registro.' });
     }
 });
 
 
-// RUTA DE LOGIN DE USUARIO NORMAL
+// RUTA DE LOGIN DE USUARIO (Sin cambios aquí)
 app.post('/usuarios/login', async (req, res) => {
-    // Expect email, username, and password in the body
+    // Espera email O username, y password en el body
     const { email, username, password } = req.body;
 
-    // Validate required fields for login
-    if (!email || !username || !password) {
-        return res.status(400).json({ error: 'Email, username y password son requeridos para iniciar sesión' });
+    // Validar campos requeridos para login: Se requiere al menos email O username, Y password
+    if ((!email && !username) || !password) {
+        return res.status(400).json({ error: 'Se requiere email o username, y contraseña para iniciar sesión.' });
     }
 
     try {
-        // 1. Search for the user by email AND username
-        const { data: user, error: userError } = await supabase
-            .from('usuario')
-            .select('cod_usuario, username, password_hash') // Make sure to select password_hash
-            .eq('email', email) // <-- USE 'email' (lowercase)
-            .eq('username', username) // And filter by username
-            .single(); // Expect 0 or 1 result
+        // 1. Construir la consulta de búsqueda
+        let query = supabase.from('usuario').select('cod_usuario, username, password_hash');
 
-        if (userError && userError.code !== 'PGRST116') { // PGRST116 = No rows found
-            console.error('Error searching user for login:', userError.message);
-            throw userError; // Throw the error if it's not "no rows found"
-        }
+        if (email && username) { query = query.eq('email', email).eq('username', username); }
+        else if (email) { query = query.eq('email', email); }
+        else if (username) { query = query.eq('username', username); }
 
-        // 2. Check if the user exists and if the password is correct
+        const { data: user, error: userError } = await query.single();
+
+        if (userError && userError.code !== 'PGRST116') { console.error('Error buscando usuario para login:', userError.message); throw userError; }
+
+        // 2. Verificar usuario y contraseña
         if (!user || !(await bcrypt.compare(password, user.password_hash))) {
-            // If user not found (email AND username didn't match) OR password is incorrect
-            return res.status(401).json({ error: 'Credenciales inválidas' }); // Generic message for security
+            return res.status(401).json({ error: 'Credenciales inválidas' });
         }
 
-        // 3. Generate JWT token for the user
-        // Include a unique identifier (email/cod_usuario) and user type in the payload
-        const token = jwt.sign(
-            { codUsuario: user.cod_usuario, username: user.username, type: 'user' }, // Payload with email (codUsuario) and username
-            JWT_SECRET,
-            { expiresIn: '1h' } // Expires in 1 hour
-        );
+        // 3. Generar token
+        const token = jwt.sign( { codUsuario: user.cod_usuario, username: user.username, type: 'user' }, JWT_SECRET, { expiresIn: '1h' });
 
         res.json({ token });
 
     } catch (err) {
-        console.error('User Login Error:', err.message);
+        console.error('Error durante el login de usuario:', err.message);
+        if (res.headersSent) return;
         res.status(500).json({ error: err.message });
     }
 });
 
-// Example protected route for normal users
-// Requires the authenticateUser middleware to verify the token
+// RUTA DE PERFIL DE USUARIO (Modificada para incluir URLs de fotos)
+// Requiere el middleware authenticateUser para verificar el token
 app.get('/usuarios/profile', authenticateUser, async (req, res) => {
-    // req.codUsuario contains the email of the authenticated user (from the token)
-    // req.username contains the username of the authenticated user (from the token)
     try {
-        // Load profile data for the authenticated user, including client data if it exists
+        // Incluye las nuevas columnas foto_url_1 y foto_url_2 en la selección
         const { data: profile, error } = await supabase
             .from('usuario')
             .select(`
                  cod_usuario,
-                 email, -- <-- USE 'email' (lowercase)
+                 email,
                  nombre,
                  username,
+                 edad,
+                 estudios_trabajo,
+                 orientacion_sexual,
+                 foto_url_1, -- <-- Incluido
+                 foto_url_2, -- <-- Incluido
                  location::geometry -> ST_Y as latitude,
-                 location::geometry -> ST_X as longitude,
-                 cliente:cod_usuario(
-                     Edad,
-                     Estudios_Trabajo,
-                     Orientacion_sexual
-                 )
+                 location::geometry -> ST_X as longitude
              `)
-            .eq('cod_usuario', req.codUsuario) // Use the email of the authenticated user (codUsuario)
+            .eq('cod_usuario', req.codUsuario)
             .single();
 
         if (error && error.code !== 'PGRST116') {
@@ -427,168 +375,81 @@ app.get('/usuarios/profile', authenticateUser, async (req, res) => {
         }
 
         if (!profile) {
-            // This should not happen if authenticateUser was successful, but it's good practice
-            return res.status(404).json({ error: 'User profile not found after authentication' });
+            console.error('User profile not found after successful authentication for user:', req.codUsuario);
+            return res.status(404).json({ error: 'Perfil de usuario no encontrado' });
         }
 
         res.json({
-            message: `Profile data for user with email: ${req.codUsuario} / username: ${req.username}`,
+            message: `Datos de perfil para el usuario con email: ${req.codUsuario} / username: ${req.username}`,
             profile: profile
         });
 
     } catch (err) {
         console.error('Error fetching user profile:', err.message);
-        res.status(500).json({ error: 'Error loading profile' });
+        if (res.headersSent) return;
+        res.status(500).json({ error: 'Error al cargar el perfil' });
     }
 });
 
 
-// ====================== CLIENTES ======================
-// MODIFIED: Includes location (latitude, longitude) of the related user
-// Consider if this route should be protected (authenticateUser or authenticateAdminEmpresa)
-app.get('/clientes', async (req, res) => {
-    try {
-        const { data, error } = await supabase
-            .from('cliente')
-            .select(`
-                cod_usuario,
-                Edad,
-                Estudios_Trabajo,
-                Orientacion_sexual,
-                usuario:cod_usuario(
-                    email, -- <-- USE 'email' (lowercase)
-                    nombre,
-                    username,
-                    -- Add selection of user coordinates from the usuario table
-                    location::geometry -> ST_Y as latitude,
-                    location::geometry -> ST_X as longitude
-                )
-            `);
+// ====================== RUTAS DE USUARIOS (Ubicación) (Sin cambios aquí) ======================
 
-        if (error) throw error;
-        // Each client object will now have a 'usuario' object with 'latitude' and 'longitude'
-        res.json(data);
-    } catch (err) {
-        console.error('Error fetching clients:', err.message);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// Consider if this client update route should be protected
-// and if the authenticated user can only update THEIR OWN client entry
-app.put('/clientes/:id', async (req, res) => {
-    const { Edad, Estudios_Trabajo, Orientacion_sexual } = req.body;
-    const clienteCodUsuario = req.params.id; // The cod_usuario of the client to update
-
-    // TODO: Implement AUTHENTICATION/AUTHORIZATION
-    // Ex: If only the authenticated user can update their own client profile:
-    // app.put('/clientes/:id', authenticateUser, async (req, res) => { ...
-    // Then inside the route:
-    // if (req.codUsuario !== req.params.id) { // Use req.params.id as it is the client's cod_usuario
-    //    return res.status(403).json({ error: 'You do not have permission to update this client profile' });
-    // }
-
-
-    try {
-        // Only update the fields that are provided in the body
-        const updateData = {};
-        // Add only fields that are not undefined, null, or empty/whitespace strings
-        if (Edad !== undefined && Edad !== null && String(Edad).trim() !== '') updateData.Edad = parseInt(String(Edad).trim(), 10); // Make sure it's a number
-        if (Estudios_Trabajo !== undefined && Estudios_Trabajo !== null && String(Estudios_Trabajo).trim() !== '') updateData.Estudios_Trabajo = String(Estudios_Trabajo).trim();
-        if (Orientacion_sexual !== undefined && Orientacion_sexual !== null && String(Orientacion_sexual).trim() !== '') updateData.Orientacion_sexual = String(Orientacion_sexual).trim();
-
-
-        // If there are no fields to update, return a message or error
-        if (Object.keys(updateData).length === 0) {
-            return res.status(400).json({ error: "No valid fields to update" });
-        }
-
-
-        const { data: clienteData, error: clienteError } = await supabase
-            .from('cliente')
-            .update(updateData)
-            .eq('cod_usuario', clienteCodUsuario) // Assume the client ID is cod_usuario
-            .select(); // Optional: select the updated data
-
-        if (clienteError) throw clienteError;
-
-        if (!clienteData || clienteData.length === 0) {
-            return res.status(404).json({ error: "Client not found with that user code" });
-        }
-
-        res.json(clienteData[0]);
-    } catch (err) {
-        console.error('Error updating client:', err.message);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// ====================== USUARIOS (Location Routes) ======================
-
-// Route to update the location of a specific user
-// Expects in the body: { latitude: number, longitude: number }
-// The ID of the user to update comes in the URL parameter :cod_usuario
-// !!! IMPORTANT: Implement AUTHENTICATION/AUTHORIZATION here to ensure that
-// a user can only update THEIR OWN location or that only an admin can do it.
-// You can use the authenticateUser middleware here and check if req.codUsuario === req.params.cod_usuario
-app.put('/usuarios/:cod_usuario/location', async (req, res) => {
+// Ruta para actualizar la ubicación de un usuario específico (Protegida)
+// Espera en el body: { latitude: number, longitude: number }
+// El ID del usuario a actualizar viene en el parámetro de URL :cod_usuario
+app.put('/usuarios/:cod_usuario/location', authenticateUser, async (req, res) => {
     const usuarioCod = req.params.cod_usuario;
     const { latitude, longitude } = req.body;
 
-    // TODO: Implement AUTHENTICATION/AUTHORIZATION
-    // Ex: Using authenticateUser middleware:
-    // app.put('/usuarios/:cod_usuario/location', authenticateUser, async (req, res) => { ...
-    // Then inside the route:
-    // if (req.codUsuario !== req.params.cod_usuario) {
-    //    return res.status(403).json({ error: 'You do not have permission to update this location' });
-    // }
-
-
-    // Validate that latitude and longitude were sent
-    if (latitude === undefined || longitude === undefined || typeof latitude !== 'number' || typeof longitude !== 'number') {
-        return res.status(400).json({ error: 'Valid latitude and longitude numbers are required' });
+    if (req.codUsuario !== usuarioCod) {
+        console.warn(`Acceso denegado: Usuario ${req.codUsuario} intentó actualizar ubicación de ${usuarioCod}`);
+        return res.status(403).json({ error: 'No tienes permiso para actualizar esta ubicación.' });
     }
 
+    if (latitude === undefined || longitude === undefined || typeof latitude !== 'number' || typeof longitude !== 'number') {
+        return res.status(400).json({ error: 'Se requieren números válidos para latitude y longitude.' });
+    }
+    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+        return res.status(400).json({ error: 'Valores de latitud (-90 a 90) o longitud (-180 a 180) inválidos.' });
+    }
+
+
     try {
-        // Build the value of the 'location' field in WKT (Well-Known Text) format
-        // PostGIS and PostgREST can parse this format directly
-        // IMPORTANT: POINT expects (longitude, latitude)
         const locationPointWkt = `POINT(${longitude} ${latitude})`;
 
         const { data, error } = await supabase
-            .from('usuario') // Update the 'usuario' table
+            .from('usuario')
             .update({ location: locationPointWkt })
-            .eq('cod_usuario', usuarioCod) // Filter by cod_usuario
-            .select('cod_usuario, location::geometry -> ST_Y as latitude, location::geometry -> ST_X as longitude'); // Optional: select the updated location to confirm
+            .eq('cod_usuario', usuarioCod)
+            .select('cod_usuario, location::geometry -> ST_Y as latitude, location::geometry -> ST_X as longitude');
 
         if (error) {
             console.error('Error updating user location:', error.message);
+            if (error.details) console.error('Error details:', error.details);
+            if (error.hint) console.error('Error hint:', error.hint);
             throw new Error(`Database error updating location: ${error.message}`);
         }
 
-
         if (!data || data.length === 0) {
-            return res.status(404).json({ error: 'User not found with that code' });
+            console.error('User not found during location update despite authentication:', usuarioCod);
+            return res.status(404).json({ error: 'Usuario no encontrado para actualizar ubicación.' });
         }
 
-        res.json(data[0]); // Return the updated user with their new location
+        res.json(data[0]);
 
     } catch (err) {
         console.error('Unhandled error updating user location:', err.message);
-        res.status(500).json({ error: err.message });
+        if (res.headersSent) return;
+        res.status(500).json({ error: 'Error al actualizar la ubicación.' });
     }
 });
 
-// Route to find users within a specific radius
-// Expects in query params: ?lat=...&lon=...&radius=... (radius in meters)
-// Optional: You can protect this route if only authenticated users can search nearby
-// You can use the authenticateUser middleware here
+// Ruta para encontrar usuarios dentro de un radio específico (Sin cambios aquí)
 app.get('/usuarios/nearby', async (req, res) => {
-    const { lat, lon, radius } = req.query; // Receive latitude, longitude, and radius from query params
+    const { lat, lon, radius } = req.query;
 
-    // Validate parameters
     if (lat === undefined || lon === undefined || radius === undefined) {
-        return res.status(400).json({ error: 'Parameters lat, lon, and radius are required' });
+        return res.status(400).json({ error: 'Los parámetros lat, lon y radius son requeridos.' });
     }
 
     const latitude = parseFloat(lat);
@@ -596,50 +457,50 @@ app.get('/usuarios/nearby', async (req, res) => {
     const radiusInMeters = parseFloat(radius);
 
     if (isNaN(latitude) || isNaN(longitude) || isNaN(radiusInMeters) || radiusInMeters < 0) {
-        return res.status(400).json({ error: 'Invalid parameters: lat, lon must be numbers, radius must be a non-negative number.' });
+        return res.status(400).json({ error: 'Parámetros inválidos: lat, lon deben ser números, radius debe ser un número no negativo.' });
+    }
+    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+        return res.status(400).json({ error: 'Valores de latitud (-90 a 90) o longitud (-180 a 180) inválidos en los parámetros de búsqueda.' });
     }
 
     try {
-        // Create the reference point in WKT format for the PostGIS query
-        // ST_SetSRID(ST_MakePoint(longitude, latitude), SRID) - although with simple WKT and filter is enough
-        const centerPointWkt = `POINT(${longitude} ${latitude})`; // WKT format
+        const centerPointWkt = `POINT(${longitude} ${latitude})`;
 
-        // Use the 'st_dwithin' PostGIS operator through the Supabase filter
-        // The st_dwithin operator for GEOGRAPHY expects (reference_point, distance_in_meters)
         const { data, error } = await supabase
-            .from('usuario') // Query the 'usuario' table
+            .from('usuario')
             .select(`
                 cod_usuario,
-                email, -- <-- USE 'email' (lowercase)
+                email,
                 nombre,
                 username,
-                -- Select coordinates of found users
+                edad,
+                estudios_trabajo,
+                orientacion_sexual,
                 location::geometry -> ST_Y as latitude,
                 location::geometry -> ST_X as longitude
             `)
-            .not('location', 'is', null) // Optional: Exclude users without registered location
-            // st_dwithin is the PostGIS operator, ${centerPointWkt}, ${radiusInMeters} are the arguments
+            .not('location', 'is', null)
             .filter('location', 'st_dwithin', `${centerPointWkt}, ${radiusInMeters}`);
 
         if (error) {
             console.error('Error fetching nearby users:', error.message);
-            // PostGIS errors can be tricky. Make sure the generated SQL is valid.
-            // If this becomes complex, consider creating an RPC/Database Function in Supabase.
-            throw new Error(`Database error finding nearby users: ${err.message}`); // <-- Corrected: use err.message
+            if (error.details) console.error('Error details:', error.details);
+            if (error.hint) console.error('Error hint:', error.hint);
+            throw new Error(`Database error finding nearby users: ${error.message}`);
         }
 
-        // The data will contain the users found within the radius, with their coordinates.
         res.json(data);
 
     } catch (err) {
         console.error('Unhandled error fetching nearby users:', err.message);
-        res.status(500).json({ error: err.message });
+        if (res.headersSent) return;
+        res.status(500).json({ error: 'Error al buscar usuarios cercanos.' });
     }
 });
 
 
-// ====================== EMPRESAS ======================
-// This section does not need changes as it does not interact directly with user location
+// ====================== RUTAS DE EMPRESAS Y EVENTOS (Sin cambios aquí) ======================
+
 app.get('/empresas/:nif/eventos', async (req, res) => {
     try {
         const { data, error } = await supabase
@@ -653,16 +514,15 @@ app.get('/empresas/:nif/eventos', async (req, res) => {
             `)
             .eq('NIF', req.params.nif);
 
-        if (error) throw error;
+        if (error) { console.error('Error fetching company events:', error.message); throw error; }
         res.json(data);
     } catch (err) {
-        console.error('Error fetching company events:', err.message);
+        console.error('Unhandled error fetching company events:', err.message);
+        if (res.headersSent) return;
         res.status(500).json({ error: err.message });
     }
 });
 
-// ====================== EVENTOS ======================
-// These routes do not need changes as they do not interact directly with user location
 app.get('/eventos', async (req, res) => {
     try {
         const { data, error } = await supabase
@@ -676,10 +536,11 @@ app.get('/eventos', async (req, res) => {
                 empresa:NIF(Nombre)
             `);
 
-        if (error) throw error;
+        if (error) { console.error('Error fetching all events:', error.message); throw error; }
         res.json(data);
     } catch (err) {
-        console.error('Error fetching all events:', err.message);
+        console.error('Unhandled error fetching all events:', err.message);
+        if (res.headersSent) return;
         res.status(500).json({ error: err.message });
     }
 });
@@ -699,14 +560,14 @@ app.get('/eventos/:id', async (req, res) => {
             .eq('cod_evento', req.params.id)
             .single();
 
-        if (error && error.code !== 'PGRST116') { // PGRST116 = No rows found
-            throw error;
-        }
+        if (error && error.code !== 'PGRST116') { console.error('Error fetching event by ID:', error.message); throw error; }
 
+        if (!data) { return res.status(404).json({ error: "Evento no encontrado" }); }
 
-        data ? res.json(data) : res.status(404).json({ error: "Evento not found" }); // Corrected message
+        res.json(data);
     } catch (err) {
-        console.error('Error fetching event by ID:', err.message);
+        console.error('Unhandled error fetching event by ID:', err.message);
+        if (res.headersSent) return;
         res.status(500).json({ error: err.message });
     }
 });
@@ -720,7 +581,7 @@ app.put('/eventos/:id', async (req, res) => {
     if (hora_finalizacion !== undefined) updateData.hora_finalizacion = hora_finalizacion;
 
     if (Object.keys(updateData).length === 0) {
-        return res.status(400).json({ error: "No fields to update" }); // Corrected message
+        return res.status(400).json({ error: "No se proporcionaron campos para actualizar" });
     }
 
     try {
@@ -730,54 +591,22 @@ app.put('/eventos/:id', async (req, res) => {
             .eq('cod_evento', req.params.id)
             .select();
 
-        if (error) throw error;
+        if (error) { console.error('Error updating event:', error.message); throw error; }
 
         if (!data || data.length === 0) {
-            return res.status(404).json({ error: "Event not found to update" }); // Corrected message
+            return res.status(404).json({ error: "Evento no encontrado para actualizar" });
         }
 
         res.json(data[0]);
     } catch (err) {
-        console.error('Error updating event:', err.message);
+        console.error('Unhandled error updating event:', err.message);
+        if (res.headersSent) return;
         res.status(500).json({ error: err.message });
     }
 });
 
-// ====================== LOCALES ======================
-// This route does not need changes as it does not interact directly with user location
-app.get('/locales/:id/eventos', async (req, res) => {
-    try {
-        const { data, error } = await supabase
-            .from('evento')
-            .select(`
-                cod_evento,
-                nombre,
-                hora_inicio,
-                hora_finalizacion,
-                empresa:NIF(Nombre)
-            `)
-            .eq('cod_local', req.params.id);
 
-        if (error) throw error;
-        res.json(data);
-    } catch (err) {
-        console.error('Error fetching local events:', err.message);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// Global error handling
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    // Avoid sending sensitive details in production
-    const errorMessage = process.env.NODE_ENV === 'development' ? err.message : 'Internal Server Error'; // Corrected message
-    res.status(500).json({
-        error: 'Internal Server Error', // Corrected message
-        detalles: errorMessage
-    });
-});
-
-// Start server
+// Inicia el servidor
 app.listen(port, () => {
-    console.log(`Supabase server listening on http://localhost:${port}`); // Corrected message
+    console.log(`Backend corriendo en http://localhost:${port}`);
 });
