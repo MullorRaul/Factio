@@ -7,59 +7,80 @@ import {
     Dimensions,
     FlatList,
     ImageBackground,
-    TouchableOpacity, // Keep if you have other touchables, remove if only for the old "back"
+    TouchableOpacity, // Necesario para el botón
+    // Alert, // Ya no necesitamos Alert para el botón de eventos
 } from 'react-native';
+// LinearGradient es necesario si lo sigues usando en los estilos
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router'; // Still useful for other navigation if needed
+// useRouter es necesario para la navegación a otras pantallas
+import { useRouter } from 'expo-router';
 
 const { height, width } = Dimensions.get('window');
 
 interface PubAd {
     id: string;
-    image: any;
+    image: any; // Consider using a more specific type if possible (e.g., ImageSourcePropType)
     name: string;
     price?: string;
-    offers?: string;
     location: string;
     musicType: string;
     entryPrice?: string;
+    // Puedes añadir un campo para el ID del evento real si lo obtienes del backend
+    // eventId: number;
+    // Añadimos un campo para la ruta de eventos específica si es necesario
+    eventRoute?: string;
 }
 
+// Datos de ejemplo (Hardcoded por ahora)
+// NOTA: En una aplicación real, cargarías estos datos desde tu backend.
 const DATA: PubAd[] = [
     {
         id: '1',
-        // Assuming assets folder is at the root of your project (e.g., my-app/assets)
-        // If offers.tsx was in app/, path was ../assets. Now from app/(tabs)/, it's ../../assets
         image: require('../../assets/images/delirium.jpg'),
         name: 'Pub Delirium',
         price: '3€ cerveza',
-        offers: '2x1 hasta las 12',
         location: 'Centro Alcoy',
         musicType: 'Rock',
         entryPrice: 'Gratis',
+        // eventId: 1, // Ejemplo de cómo podrías tener un ID real
+        eventRoute: '/(tabs)/eventos_delirium', // Ruta a la pantalla de eventos de Delirium
     },
     {
         id: '2',
         image: require('../../assets/images/Gaudi.jpg'),
         name: 'Gaudi',
         price: '5€ copa',
-        offers: 'Happy Hour 4–6am',
         location: 'Polígono',
         musicType: 'Electrónica',
         entryPrice: '5€ con copa',
+        // eventId: 2, // Ejemplo de cómo podrías tener un ID real
+        eventRoute: '/(tabs)/eventos_gaudi', // Ruta a la pantalla de eventos de Gaudi
     },
     // más pubs...
 ];
 
-export default function OffersScreen() { // Renamed from PubReelScreen
-    const router = useRouter(); // Keep for potential future internal navigation
+export default function OffersScreen() {
+    // useRouter es necesario para la navegación a otras pantallas
+    const router = useRouter();
+
+    // Función para manejar el botón "Ver Eventos Semanales"
+    const handleViewEvents = (event: PubAd) => {
+        if (event.eventRoute) {
+            // Navegar a la ruta específica del evento
+            // Corregido: Casting event.eventRoute to 'any' to satisfy TypeScript
+            router.push(event.eventRoute as any);
+        } else {
+            // Si no hay ruta definida, mostrar una alerta o navegar a una pantalla genérica
+            console.warn(`No eventRoute defined for ${event.name}`);
+        }
+    };
 
     const renderItem = ({ item }: { item: PubAd }) => (
         <View style={styles.cardContainer}>
             <ImageBackground
                 source={item.image}
                 style={styles.imageBackground}
-                resizeMode="cover" // Good practice for background images
+                resizeMode="cover"
             >
                 <LinearGradient
                     colors={['transparent', 'rgba(0,0,0,0.8)']}
@@ -69,17 +90,16 @@ export default function OffersScreen() { // Renamed from PubReelScreen
                     <Text style={styles.pubName}>{item.name}</Text>
                     <Text style={styles.pubDetail}>{item.location} • {item.musicType}</Text>
                     {item.price && <Text style={styles.pubDetail}>Precio bebida: {item.price}</Text>}
-                    {item.offers && <Text style={styles.offerText}>{item.offers}</Text>}
                     {item.entryPrice && <Text style={styles.pubDetail}>Entrada: {item.entryPrice}</Text>}
-                    {/* The 'Volver' button might not be needed here if navigation is handled by tabs
-                        If you keep it, ensure its behavior makes sense in the tab context.
+
+                    {/* Botón "Ver Eventos Semanales" */}
                     <TouchableOpacity
-                        style={styles.backButton}
-                        onPress={() => router.back()} // This would navigate back in the stack, if any
+                        style={styles.viewEventsButton}
+                        onPress={() => handleViewEvents(item)}
                     >
-                        <Text style={styles.backButtonText}>Volver</Text>
+                        <Text style={styles.viewEventsButtonText}>Ver Eventos Semanales</Text>
                     </TouchableOpacity>
-                    */}
+
                 </View>
             </ImageBackground>
         </View>
@@ -87,15 +107,14 @@ export default function OffersScreen() { // Renamed from PubReelScreen
 
     return (
         <FlatList
-            data={DATA}
+            data={DATA} // Usarías datos reales del backend aquí
             keyExtractor={item => item.id}
             renderItem={renderItem}
             pagingEnabled
             showsVerticalScrollIndicator={false}
             decelerationRate="fast"
-            snapToInterval={height} // Be mindful of tab bar height here
+            snapToInterval={height}
             snapToAlignment="start"
-            // The FlatList will take the height given by the Tab Navigator's screen area
         />
     );
 }
@@ -103,13 +122,11 @@ export default function OffersScreen() { // Renamed from PubReelScreen
 const styles = StyleSheet.create({
     cardContainer: {
         width: width,
-        height: height, // This makes each item take the full screen height.
-                        // The tab bar will overlay the bottom part or the content area will be adjusted.
-                        // Expo Router's Tabs layout usually handles the content area correctly.
+        height: height,
         backgroundColor: '#000',
     },
     imageBackground: {
-        width: '100%', // Use '100%' for flexibility
+        width: '100%',
         height: '100%',
     },
     gradientOverlay: {
@@ -121,10 +138,10 @@ const styles = StyleSheet.create({
     },
     infoContainer: {
         position: 'absolute',
-        bottom: 60, // Increased slightly to ensure it's above a typical tab bar
+        bottom: 80,
         left: 20,
         right: 20,
-        paddingBottom: 10, // Add some padding at the very bottom of the text content
+        paddingBottom: 10,
     },
     pubName: {
         fontSize: 28,
@@ -135,25 +152,19 @@ const styles = StyleSheet.create({
     pubDetail: {
         fontSize: 16,
         color: '#fff',
-        marginBottom: 4, // Added for better spacing
+        marginBottom: 4,
     },
-    offerText: {
-        marginTop: 4,
-        fontSize: 18,
-        color: '#ffd700', // Gold color for offers
-        fontWeight: '600',
+    viewEventsButton: {
+        marginTop: 16,
+        backgroundColor: '#e14eca',
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 20,
+        alignSelf: 'flex-start',
     },
-    // backButton and backButtonText styles are removed if the button is removed
-    // backButton: {
-    //     marginTop: 16,
-    //     alignSelf: 'flex-start',
-    //     backgroundColor: 'rgba(0,0,0,0.5)',
-    //     paddingVertical: 8,
-    //     paddingHorizontal: 16,
-    //     borderRadius: 8,
-    // },
-    // backButtonText: {
-    //     color: '#fff',
-    //     fontSize: 16,
-    // },
+    viewEventsButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
 });

@@ -3,5 +3,5 @@ import { Redirect } from 'expo-router';
 
 export default function Index() {
     // Al entrar en "/", te manda a "/signup"
-    return <Redirect href="/signup" />;
+    return <Redirect href="/login" />;
 }
