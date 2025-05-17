@@ -57,7 +57,7 @@ const DATA: PubAd[] = [
     {
         id: '3', // Nuevo ID para Don Vito
         // **CORREGIDO:** Usamos require para la imagen local don_vito.jpg
-        image: require('../../assets/images/don_vito.png'),
+        image: require('../../assets/images/don_vito.jpeg'),
         name: 'Don Vito',
         price: '4€ combinado', // Ejemplo de precio
         location: 'Zona Centro', // Ejemplo de ubicación

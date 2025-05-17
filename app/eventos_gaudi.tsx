@@ -2,7 +2,7 @@
 import React from 'react';
 import {
     View,
-    Text,
+    Text, // Asegúrate de importar Text
     StyleSheet,
     ScrollView,
     // Eliminado: Image, // Ya no necesitamos el componente Image
@@ -163,8 +163,16 @@ export default function EventosGaudiScreen() {
 
                                     <View style={styles.eventInfo}>
                                         <Text style={styles.eventName}>{event.name}</Text>
-                                        {event.time && <Text style={styles.eventDetail}>Hora: {event.time}</Text>}
-                                        {event.entryPrice && <Text style={styles.eventDetail}>Entrada: {event.entryPrice}</Text>}
+                                        {event.time && (
+                                            <Text style={styles.eventDetail}>
+                                                Hora: <Text>{event.time}</Text> {/* Texto anidado */}
+                                            </Text>
+                                        )}
+                                        {event.entryPrice && (
+                                            <Text style={styles.eventDetail}>
+                                                Entrada: <Text>{event.entryPrice}</Text> {/* Texto anidado */}
+                                            </Text>
+                                        )}
                                         <Text style={styles.eventDescription}>{event.description}</Text>
 
                                         {/* Botón Apuntarse */}
