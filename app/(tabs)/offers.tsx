@@ -1,5 +1,5 @@
-// app/(tabs)/offers.tsx
-import React, { useEffect, useState } from 'react'; // Importamos useEffect y useState
+/* app/(tabs)/offers.tsx */
+import React, { useState, useEffect, useRef } from 'react';
 import {
     View,
     Text,
@@ -8,327 +8,209 @@ import {
     FlatList,
     ImageBackground,
     TouchableOpacity,
-    Alert,
-    ActivityIndicator, // Añadimos ActivityIndicator para el estado de carga
+    ActivityIndicator,
+    Animated,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const { height, width } = Dimensions.get('window');
+const TAB_BAR_HEIGHT = 60;
+const AUTO_SCROLL_DURATION = 13000;
 
-// Interfaz para los datos de los locales, basada en las columnas de la tabla 'local' y lo que necesitas mostrar
-interface PubAd {
-    id: string; // Corresponde a 'cod_local' de la base de datos (lo convertimos a string)
-    image: { uri: string } | number; // Ahora puede ser URL (string) o require (number para imágenes locales temporales)
-    name: string; // Corresponde a 'nombre' en la base de datos
-    price?: string; // Este dato no está directamente en 'local'. Deberás obtenerlo de otro lado (ej: tabla de ofertas o eventos).
-    location: string; // Corresponde a 'direccion' en la base de datos
-    musicType?: string; // Este dato no está directamente en 'local'. Deberás obtenerlo de otro lado.
-    entryPrice?: string; // Este dato no está directamente en 'local'. Deberás obtenerlo de otro lado.
-    // Añadimos los campos que vienen de la tabla 'local' en el backend
-    aforo?: number; // Corresponde a 'aforo'
-    nif?: string; // Corresponde a 'nif'
-    empresa?: number; // Corresponde a 'empresa'
-    // Si tu backend incluye la URL de la foto en la respuesta de /api/locales, añádela aquí:
-    url_foto_principal?: string; // Ejemplo de campo para la URL de la foto
+interface AgeBucket { age: number; count: number; }
+interface ReelEvent {
+    id: string;
+    image: any;
+    name: string;
+    date: string;
+    aforo: number;
+    occupied: number;
+    genderRatio: { male: number; female: number };
+    musicStyle: string;
+    dailyOffer: string;
+    theme: string;
+    ageDistribution: AgeBucket[];
 }
 
-// Datos de ejemplo (Hardcodeados por ahora, incluyendo Don Vito)
-// NOTA: Esto será reemplazado por datos de tu backend.
-const DATA: PubAd[] = [
+const MOCK_REELS: ReelEvent[] = [
     {
-        id: '1',
-        image: require('../../assets/images/delirium.jpg'), // Reemplazar por URL desde DB
-        name: 'Pub Delirium',
-        price: '3€ cerveza',
-        location: 'Centro Alcoy',
-        musicType: 'Rock',
-        entryPrice: 'Gratis',
+        id: '1', image: require('../../assets/images/delirium.jpg'), name: 'Pub Delirium', date: 'May 20, 2025',
+        aforo: 200, occupied: 120, genderRatio: { male: 65, female: 35 },
+        musicStyle: 'Rock', dailyOffer: '2x1 cervezas', theme: 'Semáforo',
+        ageDistribution: [
+            { age: 18, count: 5 }, { age: 20, count: 15 }, { age: 22, count: 30 },
+            { age: 24, count: 40 }, { age: 26, count: 20 }, { age: 28, count: 10 },
+        ],
     },
     {
-        id: '2',
-        image: require('../../assets/images/Gaudi.jpg'), // Reemplazar por URL desde DB
-        name: 'Gaudi',
-        price: '5€ copa',
-        location: 'Polígono',
-        musicType: 'Electrónica',
-        entryPrice: '5€ con copa',
+        id: '2', image: require('../../assets/images/Gaudi.jpg'), name: 'Gaudi', date: 'May 22, 2025',
+        aforo: 150, occupied: 85, genderRatio: { male: 50, female: 50 },
+        musicStyle: 'Electrónica', dailyOffer: 'Copa 4€', theme: 'Cartas',
+        ageDistribution: [
+            { age: 19, count: 2 }, { age: 21, count: 10 }, { age: 23, count: 25 },
+            { age: 25, count: 30 }, { age: 27, count: 15 }, { age: 29, count: 3 },
+        ],
     },
     {
-        id: '3', // Nuevo ID para Don Vito
-        // **CORREGIDO:** Usamos require para la imagen local don_vito.jpg
-        image: require('../../assets/images/don_vito.jpeg'),
-        name: 'Don Vito',
-        price: '4€ combinado', // Ejemplo de precio
-        location: 'Zona Centro', // Ejemplo de ubicación
-        musicType: 'Variado', // Ejemplo de tipo de música
-        entryPrice: '10€ con copa', // Ejemplo de entrada
+        id: '3', image: require('../../assets/images/don_vito.jpeg'), name: 'Don Vito', date: 'May 24, 2025',
+        aforo: 100, occupied: 40, genderRatio: { male: 60, female: 40 },
+        musicStyle: 'Variado', dailyOffer: 'Combo 5€', theme: 'Retro',
+        ageDistribution: [
+            { age: 18, count: 1 }, { age: 20, count: 5 }, { age: 22, count: 10 },
+            { age: 24, count: 15 }, { age: 26, count: 8 }, { age: 28, count: 1 },
+        ],
     },
-    // más pubs...
 ];
-
 
 export default function OffersScreen() {
     const router = useRouter();
-
-    // Estado para almacenar los datos de los locales cargados desde el backend
-    const [locals, setLocals] = useState<PubAd[]>([]);
-    // Estado para manejar el estado de carga
+    const [reels, setReels] = useState<ReelEvent[]>([]);
     const [loading, setLoading] = useState(true);
-    // Estado para manejar errores
-    const [error, setError] = useState<string | null>(null);
+    const scrollRef = useRef<FlatList<ReelEvent>>(null);
+    const timer = useRef(new Animated.Value(0)).current;
+    const [currentIndex, setCurrentIndex] = useState(0);
 
-    // useEffect para cargar los datos cuando el componente se monta
     useEffect(() => {
-        // Función asíncrona para obtener los datos de los locales desde el backend
-        const fetchLocals = async () => {
-            try {
-                // ** IMPORTANTE: Reemplaza esta URL con la URL real de tu API de backend **
-                // Si tu backend corre localmente en el puerto 3001, la URL podría ser:
-                // 'http://TU_IP_LOCAL:3001/api/locales' (usa la IP de tu máquina en la red local)
-                // o 'http://localhost:3001/api/locales' si usas un emulador que mapea localhost.
-                // Si tu backend está desplegado, usa la URL de despliegue.
-                const response = await fetch('http://TU_IP_LOCAL_O_DOMINIO:3001/api/locales'); // <-- ¡ACTUALIZA ESTA URL!
+        setReels(MOCK_REELS);
+        setLoading(false);
+    }, []);
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const data: any[] = await response.json(); // Asumimos que el backend devuelve un array de objetos de la tabla 'local'
-
-                // Mapear los datos del backend a la interfaz PubAd del frontend
-                // ** IMPORTANTE: Ajusta este mapeo según la estructura exacta de los datos que devuelve tu backend **
-                // Los nombres de las propiedades en 'item' (ej: item.cod_local) deben coincidir
-                // con los nombres de las columnas seleccionadas en tu backend endpoint (/api/locales)
-                const mappedData: PubAd[] = data.map(item => ({
-                    id: item.cod_local.toString(), // Usar cod_local de la DB como ID (convertir a string)
-                    name: item.nombre, // Mapear 'nombre' de la DB a 'name'
-                    location: item.direccion, // Mapear 'direccion' de la DB a 'location'
-                    aforo: item.aforo, // Mapear 'aforo'
-                    nif: item.nif, // Mapear 'nif'
-                    empresa: item.empresa, // Mapear 'empresa'
-
-                    // ** Manejo de la imagen: **
-                    // Si tu tabla 'local' tiene una columna con la URL de la imagen (ej: url_foto_principal), úsala aquí.
-                    // Asegúrate de que esa columna esté seleccionada en tu backend endpoint /api/locales.
-                    // Si no, necesitarás obtener las imágenes de otra manera o añadir esa columna a tu tabla 'local'.
-                    // Por ahora, usamos un placeholder si no hay URL disponible o si la columna no existe/está vacía.
-                    image: item.url_foto_principal ? { uri: item.url_foto_principal } : { uri: 'https://placehold.co/400x600/000000/FFFFFF?text=No+Image' }, // Asumiendo que el backend devuelve url_foto_principal
-
-                    // Los campos price, musicType, entryPrice no están en la tabla 'local'.
-                    // Si tu backend los incluye en la respuesta de /api/locales (quizás uniéndose con otras tablas),
-                    // mapealos aquí. Si no, serán undefined y no se mostrarán en la UI a menos que añadas lógica para ellos.
-                    // Ejemplo si tu backend los incluyera:
-                    // price: item.precio_bebida || undefined,
-                    // musicType: item.tipo_musica || undefined,
-                    // entryPrice: item.precio_entrada || undefined,
-                    // ... mapear otros campos si es necesario
-                }));
-
-
-                setLocals(mappedData); // Actualizar el estado con los datos mapeados
-            } catch (err: any) {
-                console.error("Error fetching locals:", err);
-                setError("No se pudieron cargar los locales."); // Mostrar un mensaje de error al usuario
-            } finally {
-                setLoading(false); // Finalizar el estado de carga
+    useEffect(() => {
+        timer.setValue(0);
+        Animated.timing(timer, {
+            toValue: width,
+            duration: AUTO_SCROLL_DURATION,
+            useNativeDriver: false,
+        }).start(({ finished }) => {
+            if (finished && currentIndex < reels.length - 1) {
+                scrollRef.current?.scrollToIndex({ index: currentIndex + 1, animated: true });
             }
-        };
+        });
+    }, [currentIndex, reels.length]);
 
-        // ** Por ahora, usaremos los datos hardcodeados (DATA) si no hay backend configurado **
-        // ** Comenta las 3 líneas de abajo y descomenta fetchLocals() cuando tengas tu backend listo **
-        setLocals(DATA); // Usar datos hardcodeados temporalmente
-        setLoading(false); // Desactivar carga ya que usamos datos hardcodeados
-        console.log("Usando datos hardcodeados. Descomenta fetchLocals() cuando el backend esté listo.");
+    const onViewRef = useRef(({ viewableItems }: any) => {
+        if (viewableItems.length > 0) setCurrentIndex(viewableItems[0].index);
+    });
+    const viewConfigRef = useRef({ viewAreaCoveragePercentThreshold: 50 });
 
+    const renderReel = ({ item }: { item: ReelEvent }) => {
+        const aforoPercent = (item.occupied / item.aforo) * 100;
+        const totalAge = item.ageDistribution.reduce((s, b) => s + b.count, 0);
+        const ages = item.ageDistribution.map(b => b.age);
+        const minAge = Math.min(...ages);
+        const maxAge = Math.max(...ages);
+        const avgAge = item.ageDistribution.reduce((sum, b) => sum + b.age * b.count, 0) / totalAge;
+        const needlePos = ((avgAge - minAge) / (maxAge - minAge)) * 100;
 
-        // ** Descomenta la línea de abajo y comenta las 3 anteriores cuando tengas tu backend y endpoint listos: **
-        // fetchLocals(); // Llamar a la función para cargar los datos al montar el componente
+        return (
+            <View style={styles.cardContainer}>
+                <ImageBackground source={item.image} style={styles.imageBackground}>
+                    <View style={styles.overlay} />
 
-    }, []); // El array vacío asegura que este efecto se ejecute solo una vez al montar
+                    <View style={styles.infoContainer}>
+                        <Text style={styles.title}>{item.name}</Text>
+                        <Text style={styles.subtitle}>{item.date}</Text>
 
-    // Función para manejar el botón "Ver Eventos Semanales"
-    const handleViewEvents = (pub: PubAd) => {
-        // Navegación basada en el nombre del pub.
-        // Las rutas son directas desde la raíz '/' ya que los archivos
-        // eventos_delirium.tsx, eventos_gaudi.tsx, eventos_don_vito.tsx
-        // están directamente en la carpeta `app`.
-        if (pub.name === 'Pub Delirium') {
-            router.push('/eventos_delirium' as any);
-        } else if (pub.name === 'Gaudi') {
-            router.push('/eventos_gaudi' as any);
-        } else if (pub.name === 'Don Vito') {
-            // Navega a la pantalla de eventos de Don Vito.
-            // Usamos la ruta '/eventos_don_vito' con guiones bajos
-            // para que coincida exactamente con el nombre del archivo eventos_don_vito.tsx.
-            router.push('/eventos_don_vito' as any);
-        }
-        else {
-            // Si el pub no tiene una ruta de evento específica definida aquí, muestra una alerta.
-            Alert.alert('Info', `No hay eventos semanales definidos para ${pub.name}.`);
-            console.warn(`No specific event route found for ${pub.name}.`);
-        }
+                        {/* Aforo */}
+                        <View style={styles.statRow}>
+                            <MaterialCommunityIcons name="account-group" size={20} color="#aaa" />
+                            <Text style={styles.statText}>{item.occupied}/{item.aforo}</Text>
+                        </View>
+                        <View style={styles.barBackground}><View style={[styles.barFill, { width: `${aforoPercent}%` }]} /></View>
 
-        // Alternativa más robusta (si tuvieras una pantalla de evento genérica y pasaras el ID del local):
-        // Esto requeriría una ruta dinámica en expo-router como app/eventos/[id].tsx
-        // if (pub.id) {
-        //      router.push(`/eventos/${pub.id}` as any); // Navega a una pantalla de detalle de evento genérica usando el ID del local
-        // } else {
-        //      Alert.alert('Info', `No hay eventos semanales definidos para ${pub.name}.`);
-        // }
+                        {/* Género */}
+                        <View style={styles.statRow}>
+                            <MaterialCommunityIcons name="gender-male" size={20} color="#4ea8de" />
+                            <Text style={styles.statText}>{item.genderRatio.male}%</Text>
+                            <MaterialCommunityIcons name="gender-female" size={20} color="#de4eae" style={{ marginLeft:20 }} />
+                            <Text style={styles.statText}>{item.genderRatio.female}%</Text>
+                        </View>
+                        <View style={styles.barBackground}>
+                            <View style={[styles.barFillMale,{width:`${item.genderRatio.male}%`}]} />
+                            <View style={[styles.barFillFemale,{width:`${item.genderRatio.female}%`}]} />
+                        </View>
+
+                        {/* Edades */}
+                        <Text style={styles.detail}>Edades: {minAge} - {maxAge} años</Text>
+                        <View style={styles.ageBarBackground}>
+                            {item.ageDistribution.map(b => {
+                                const pct = (b.count / totalAge) * 100;
+                                const opacity = b.count / Math.max(...item.ageDistribution.map(x => x.count));
+                                return <View key={b.age} style={[styles.ageBarSegment, { width: `${pct}%`, backgroundColor: `rgba(222,78,174,${opacity})` }]} />;
+                            })}
+                            {/* Needle indicator */}
+                            <View style={[styles.ageNeedle, { left: `${needlePos}%` }]} />
+                        </View>
+                        <Text style={styles.detail}>Edad media: {avgAge.toFixed(1)} años</Text>
+
+                        {/* Otros detalles */}
+                        <Text style={styles.detail}>🎶 {item.musicStyle}</Text>
+                        <Text style={styles.detail}>🥂 {item.dailyOffer}</Text>
+                        <Text style={styles.detail}>🎉 {item.theme}</Text>
+
+                        {/* Botones */}
+                        <View style={styles.actionRow}>
+                            <TouchableOpacity style={styles.mapButton} onPress={()=>{}}>
+                                <MaterialCommunityIcons name="map-marker-radius" size={20} color="#aaa" />
+                                <Text style={styles.buttonText}>Cómo llegar</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.factioButton} onPress={()=>router.push({
+                                     pathname: '/match/[eventId]',
+                                     params: { eventId: item.id }
+                                   })}>
+                                <Text style={styles.buttonText}>Factio 🔥</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
+                    {/* Timer abajo */}
+                    <Animated.View style={[styles.timerContainer, { bottom: TAB_BAR_HEIGHT, width: timer }]} />
+                </ImageBackground>
+            </View>
+        );
     };
 
-    // Función para renderizar cada elemento de la lista
-    const renderItem = ({ item }: { item: PubAd }) => (
-        <View style={styles.cardContainer}>
-            <ImageBackground
-                source={item.image} // Usamos directamente item.image (que es { uri: string } o number)
-                style={styles.imageBackground}
-                resizeMode="cover"
-            >
-                <LinearGradient
-                    colors={['transparent', 'rgba(0,0,0,0.8)']}
-                    style={styles.gradientOverlay}
-                />
-                <View style={styles.infoContainer}>
-                    <Text style={styles.pubName}>{item.name}</Text>
-                    {/* Mostrar detalles del local. Usa || '...' para campos opcionales que pueden venir como undefined */}
-                    <Text style={styles.pubDetail}>
-                        {item.location || 'Ubicación no especificada'} • {item.musicType || 'Tipo de música no especificado'}
-                    </Text>
-                    {item.price && <Text style={styles.pubDetail}>Precio bebida: {item.price}</Text>}
-                    {item.entryPrice && <Text style={styles.pubDetail}>Entrada: {item.entryPrice}</Text>}
-                    {/* Puedes añadir otros detalles de la DB si los necesitas, ej: */}
-                    {/* {item.aforo !== undefined && item.aforo !== null && <Text style={styles.pubDetail}>Aforo: {item.aforo}</Text>} */}
-
-
-                    {/* Botón "Ver Eventos Semanales" */}
-                    <TouchableOpacity
-                        style={styles.viewEventsButton}
-                        onPress={() => handleViewEvents(item)} // Llama a la función de navegación
-                    >
-                        <Text style={styles.viewEventsButtonText}>Ver Eventos Semanales</Text> {/* Texto del botón */}
-                    </TouchableOpacity>
-
-                </View>
-            </ImageBackground>
-        </View>
-    );
-
-
-    // Mostrar indicador de carga mientras se obtienen los datos
-    if (loading) {
-        return (
-            <View style={styles.centered}>
-                <ActivityIndicator size="large" color="#e14eca" />
-                <Text style={styles.loadingText}>Cargando locales...</Text>
-            </View>
-        );
-    }
-
-    // Mostrar mensaje de error si falla la carga
-    if (error) {
-        return (
-            <View style={styles.centered}>
-                <Text style={styles.errorText}>{error}</Text>
-                {/* Opcional: Botón para reintentar */}
-                {/* <TouchableOpacity onPress={fetchLocals} style={styles.retryButton}>
-                    <Text style={styles.retryButtonText}>Reintentar</Text>
-                </TouchableOpacity> */}
-            </View>
-        );
-    }
-
+    if (loading) return <View style={styles.centered}><ActivityIndicator size="large" color="#e14eca"/></View>;
 
     return (
         <FlatList
-            data={locals} // ** Usamos los datos cargados desde el backend **
-            keyExtractor={item => item.id} // Usamos el ID (cod_local) como key
-            renderItem={renderItem}
+            ref={scrollRef}
+            data={reels}
+            keyExtractor={i=>i.id}
+            renderItem={renderReel}
             pagingEnabled
             showsVerticalScrollIndicator={false}
             decelerationRate="fast"
             snapToInterval={height}
             snapToAlignment="start"
+            onViewableItemsChanged={onViewRef.current}
+            viewabilityConfig={viewConfigRef.current}
         />
     );
 }
 
 const styles = StyleSheet.create({
-    cardContainer: {
-        width: width,
-        height: height,
-        backgroundColor: '#000',
-    },
-    imageBackground: {
-        width: '100%',
-        height: '100%',
-    },
-    gradientOverlay: {
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        bottom: 0,
-        height: '50%',
-    },
-    infoContainer: {
-        position: 'absolute',
-        bottom: 80,
-        left: 20,
-        right: 20,
-        paddingBottom: 10,
-    },
-    pubName: {
-        fontSize: 28,
-        color: '#fff',
-        fontWeight: 'bold',
-        marginBottom: 8,
-    },
-    pubDetail: {
-        fontSize: 16,
-        color: '#fff',
-        marginBottom: 4,
-    },
-    viewEventsButton: {
-        marginTop: 16,
-        backgroundColor: '#e14eca',
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 20,
-        alignSelf: 'flex-start',
-    },
-    viewEventsButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    centered: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#000', // Fondo oscuro similar al de las tarjetas
-    },
-    loadingText: {
-        marginTop: 10,
-        fontSize: 18,
-        color: '#fff',
-    },
-    errorText: {
-        fontSize: 18,
-        color: 'red',
-        textAlign: 'center',
-        marginHorizontal: 20,
-    },
-    retryButton: {
-        marginTop: 20,
-        backgroundColor: '#e14eca',
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 20,
-    },
-    retryButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
+    cardContainer: { width, height },
+    imageBackground: { flex: 1 },
+    overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)' },
+    infoContainer: { position: 'absolute', bottom: TAB_BAR_HEIGHT + 20, left: 0, right: 0, padding: 20 },
+    title: { fontSize: 28, color: '#eee', fontWeight: 'bold' },
+    subtitle: { fontSize: 14, color: '#bbb', marginVertical: 8 },
+    statRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
+    statText: { color: '#ddd', fontSize: 13, marginLeft: 6 },
+    barBackground: { width: '100%', height: 6, backgroundColor: '#333', borderRadius: 3, overflow: 'hidden', marginTop: 4 },
+    barFill: { height: '100%', backgroundColor: '#e14eca' },
+    barFillMale: { height: '100%', backgroundColor: '#4ea8de', position: 'absolute', left: 0 },
+    barFillFemale: { height: '100%', backgroundColor: '#de4eae', position: 'absolute', right: 0 },
+    detail: { color: '#ccc', fontSize: 13, marginTop: 6 },
+    ageBarBackground: { flexDirection: 'row', width: '100%', height: 6, backgroundColor: '#222', borderRadius: 3, overflow: 'hidden', marginTop: 4 },
+    ageBarSegment: { height: '100%' },
+    ageNeedle: { position: 'absolute', top: -4, width: 2, height: 14, backgroundColor: '#fff' },
+    actionRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 },
+    mapButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#2a2a2a', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20 },
+    factioButton: { backgroundColor: '#f4524d', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+    buttonText: { color: '#ddd', fontSize: 13, marginLeft: 6, fontWeight: 'bold' },
+    timerContainer: { position: 'absolute', height: 4, left: 0, backgroundColor: '#555' },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' },
 });
