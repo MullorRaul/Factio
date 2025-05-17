@@ -66,7 +66,6 @@ export default function TabLayout() {
                     ),
                 }}
             />
-
             {/*
                 La pantalla +not-found.tsx si está dentro de (tabs)
                 NO debe definirse aquí si ya está definida en el layout de la raíz.
@@ -80,7 +79,6 @@ export default function TabLayout() {
                 }}
             />
             */}
-
         </Tabs>
     );
 }
