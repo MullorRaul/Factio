@@ -36,7 +36,7 @@ app.use(express.json()); // Sigue siendo necesario para otras rutas que usen JSO
 // Clave secreta para firmar los tokens JWT
 const JWT_SECRET = process.env.JWT_SECRET || 'factiodb_default_secret';
 
-// Middleware para verificar el token JWT de usuario (Sin cambios aquí)
+// Middleware para verificar el token JWT de usuario
 const authenticateUser = async (req, res, next) => {
     const token = req.header('Authorization')?.replace('Bearer ', '');
 
@@ -64,9 +64,9 @@ const authenticateUser = async (req, res, next) => {
         req.codUsuario = user.cod_usuario;
         req.username = user.username; // O el campo que uses para identificar al usuario
 
-        next();
+        next(); // Si es exitoso, procede al manejador de ruta
     } catch (error) {
-        console.error('Error verifying user token:', error.message);
+        console.error('Error verifying user token:', error.message); // Esto loguea el mensaje de error del token
         if (error.name === 'TokenExpiredError') {
             return res.status(401).json({ error: 'Token expirado. Por favor, inicia sesión de nuevo.' });
         }
@@ -97,7 +97,7 @@ app.post('/usuarios/signup', upload.fields([{ name: 'foto1', maxCount: 1 }, { na
     }
 
     // Validar formato básico de email (opcional)
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.\S+$/;
     if (!emailRegex.test(email)) {
         return res.status(400).json({ error: 'Formato de email inválido' });
     }
@@ -111,7 +111,7 @@ app.post('/usuarios/signup', upload.fields([{ name: 'foto1', maxCount: 1 }, { na
     let newUser = null; // Variable para guardar el usuario insertado inicialmente
 
     try {
-        // 3. Verificar si el email o el username ya existen (Sin cambios aquí)
+        // 3. Verificar si el email o el username ya existen
         const { data: existingUser, error: existingUserError } = await supabase
             .from('usuario')
             .select('cod_usuario, username, email') // Seleccionar email también para la comprobación
@@ -137,7 +137,7 @@ app.post('/usuarios/signup', upload.fields([{ name: 'foto1', maxCount: 1 }, { na
             }
         }
 
-        // 4. Hashear la contraseña (Sin cambios aquí)
+        // 4. Hashear la contraseña
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // 5. Preparar datos de texto para insertar en 'usuario' (SIN las URLs de las fotos aún)
@@ -334,7 +334,7 @@ app.post('/usuarios/signup', upload.fields([{ name: 'foto1', maxCount: 1 }, { na
 });
 
 
-// RUTA DE LOGIN DE USUARIO (Sin cambios aquí)
+// RUTA DE LOGIN DE USUARIO
 app.post('/usuarios/login', async (req, res) => {
     // Espera email O username, y password en el body
     const { email, username, password } = req.body;
@@ -373,55 +373,67 @@ app.post('/usuarios/login', async (req, res) => {
     }
 });
 
-// RUTA DE PERFIL DE USUARIO (Modificada para incluir url_fotoperfil)
+// RUTA DE PERFIL DE USUARIO (Modificada para incluir url_fotoperfil y eliminar ubicación)
 // Requiere el middleware authenticateUser para verificar el token
 app.get('/usuarios/profile', authenticateUser, async (req, res) => {
     try {
-        // Incluye la columna url_fotoperfil en la selección (y otras columnas necesarias para el frontend)
+        console.log('BACKEND LOG: Entering /usuarios/profile route handler');
+        console.log('BACKEND LOG: User ID from token (req.codUsuario):', req.codUsuario);
+
+        // Incluye las columnas necesarias para el frontend, excluyendo la ubicación
+        console.log('BACKEND LOG: Executing Supabase query for profile');
         const { data: profile, error } = await supabase
             .from('usuario')
+            // Eliminados los comentarios SQL dentro del string select
             .select(`
                  cod_usuario,
                  email,
-                 nombre, -- Mapeado a 'Sobre mí' en frontend
+                 nombre,
                  username,
                  edad,
                  genero,
                  estudios_trabajo,
                  orientacion_sexual,
-                 url_fotoperfil, -- <-- SELECCIONA LA NUEVA COLUMNA
-                 location::geometry -> ST_Y as latitude,
-                 location::geometry -> ST_X as longitude
-                 -- Si tienes un campo 'descripcion', inclúyelo aquí:
-                 -- descripcion
-             `)
+                 url_fotoperfil,
+                 foto_url_1,
+                 foto_url_2
+             `) // <-- Asegúrate de que tu string select termine aquí, sin comentarios después
             .eq('cod_usuario', req.codUsuario)
             .single();
 
+        console.log('BACKEND LOG: Supabase query executed.');
+
         if (error && error.code !== 'PGRST116') {
-            console.error('Error fetching user profile:', error.message);
-            throw error;
+            console.error('Supabase error fetching user profile:', error.message);
+            if (error.details) console.error('Supabase error details:', error.details);
+            if (error.hint) console.error('Supabase error hint:', error.hint);
+            throw error; // Lanza el error para que el catch general lo maneje también
         }
+
+        console.log('BACKEND LOG: Supabase query result (profile):', profile);
 
         if (!profile) {
             console.error('User profile not found after successful authentication for user:', req.codUsuario);
             return res.status(404).json({ error: 'Perfil de usuario no encontrado' });
         }
 
+        console.log('BACKEND LOG: Profile data fetched successfully. Sending response.');
         res.json({
             message: `Datos de perfil para el usuario con email: ${req.codUsuario} / username: ${req.username}`,
             profile: profile
         });
 
     } catch (err) {
-        console.error('Error fetching user profile:', err.message);
+        // ESTE BLOQUE CATCH CAPTURA ERRORES INESPERADOS O ERRORES LANZADOS ARRIBA
+        console.error('Unhandled error fetching user profile:', err); // Loguea el objeto de error COMPLETO
         if (res.headersSent) return;
         res.status(500).json({ error: 'Error al cargar el perfil' });
     }
 });
 
 
-// RUTA: ACTUALIZAR PERFIL DE USUARIO (Protegida) - Modificada para manejar url_fotoperfil
+
+// RUTA: ACTUALIZAR PERFIL DE USUARIO (Protegida) - Modificada para manejar url_fotoperfil y eliminar ubicación
 // Espera en el body (FormData): campos de texto y un archivo ('fotoperfil')
 // El ID del usuario a actualizar viene en el parámetro de URL :cod_usuario
 app.put('/usuarios/:cod_usuario', authenticateUser, upload.single('fotoperfil'), async (req, res) => { // Espera un solo archivo 'fotoperfil'
@@ -432,7 +444,7 @@ app.put('/usuarios/:cod_usuario', authenticateUser, upload.single('fotoperfil'),
     const { email, username, password, edad, genero, estudios_trabajo, orientacion_sexual, nombre } = req.body; // Añadido 'nombre' (mapeado desde 'description' en frontend)
 
     // 1. Verificar que el usuario autenticado es el mismo cuyo perfil se está intentando actualizar
-    if (req.codUsuario !== usuarioCod) {
+    if (String(req.codUsuario) !== usuarioCod) { // Comparar como string por seguridad
         console.warn(`Acceso denegado: Usuario ${req.codUsuario} intentó actualizar perfil de ${usuarioCod}`);
         return res.status(403).json({ error: 'No tienes permiso para actualizar este perfil.' });
     }
@@ -547,7 +559,6 @@ app.put('/usuarios/:cod_usuario', authenticateUser, upload.single('fotoperfil'),
             // Si la subida falla, no actualizamos la URL en la DB.
             // En un sistema robusto, podrías querer manejar esto de forma más explícita.
         } else {
-            // Si la subida fue exitosa, obtener la URL pública y añadirla a updateData
             const { data: publicUrlData } = supabaseStorage
                 .from('user-photos')
                 .getPublicUrl(filePath);
@@ -574,8 +585,8 @@ app.put('/usuarios/:cod_usuario', authenticateUser, upload.single('fotoperfil'),
             .from('usuario')
             .update(updateData) // Usar el objeto updateData preparado
             .eq('cod_usuario', usuarioCod) // Filtrar por el ID del usuario
-            // Seleccionar los campos actualizados para retornarlos en la respuesta
-            .select('cod_usuario, email, nombre, username, edad, genero, estudios_trabajo, orientacion_sexual, url_fotoperfil, foto_url_1, foto_url_2, location::geometry -> ST_Y as latitude, location::geometry -> ST_X as longitude') // Incluir url_fotoperfil, foto_url_1, foto_url_2
+            // Seleccionar los campos actualizados para retornarlos en la respuesta, excluyendo ubicación
+            .select('cod_usuario, email, nombre, username, edad, genero, estudios_trabajo, orientacion_sexual, url_fotoperfil, foto_url_1, foto_url_2') // Incluir url_fotoperfil, foto_url_1, foto_url_2
             .single(); // Esperar un solo resultado
 
         if (updateError) {
@@ -612,225 +623,9 @@ app.put('/usuarios/:cod_usuario', authenticateUser, upload.single('fotoperfil'),
 });
 
 
-// ====================== RUTAS DE USUARIOS (Ubicación) (Sin cambios aquí) ======================
+// ====================== INICIO DEL SERVIDOR ======================
 
-// Ruta para actualizar la ubicación de un usuario específico (Protegida)
-// Espera en el body: { latitude: number, longitude: number }
-// El ID del usuario a actualizar viene en el parámetro de URL :cod_usuario
-app.put('/usuarios/:cod_usuario/location', authenticateUser, async (req, res) => {
-    const usuarioCod = req.params.cod_usuario;
-    const { latitude, longitude } = req.body;
-
-    if (req.codUsuario !== usuarioCod) {
-        console.warn(`Acceso denegado: Usuario ${req.codUsuario} intentó actualizar ubicación de ${usuarioCod}`);
-        return res.status(403).json({ error: 'No tienes permiso para actualizar esta ubicación.' });
-    }
-
-    if (latitude === undefined || longitude === undefined || typeof latitude !== 'number' || typeof longitude !== 'number') {
-        return res.status(400).json({ error: 'Se requieren números válidos para latitude y longitude.' });
-    }
-    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
-        return res.status(400).json({ error: 'Valores de latitud (-90 a 90) o longitud (-180 a 180) inválidos.' });
-    }
-
-
-    try {
-        const locationPointWkt = `POINT(${longitude} ${latitude})`;
-
-        const { data, error } = await supabase
-            .from('usuario')
-            .update({ location: locationPointWkt })
-            .eq('cod_usuario', usuarioCod)
-            .select('cod_usuario, location::geometry -> ST_Y as latitude, location::geometry -> ST_X as longitude');
-
-        if (error) {
-            console.error('Error updating user location:', error.message);
-            if (error.details) console.error('Error details:', error.details);
-            if (error.hint) console.error('Error hint:', error.hint);
-            throw new Error(`Database error updating location: ${error.message}`);
-        }
-
-        if (!data || data.length === 0) {
-            console.error('User not found during location update despite authentication:', usuarioCod);
-            return res.status(404).json({ error: 'Usuario no encontrado para actualizar ubicación.' });
-        }
-
-        res.json(data[0]);
-
-    } catch (err) {
-        console.error('Unhandled error updating user location:', err.message);
-        if (res.headersSent) return;
-        res.status(500).json({ error: 'Error al actualizar la ubicación.' });
-    }
-});
-
-// Ruta para encontrar usuarios dentro de un radio específico (Modificada para incluir url_fotoperfil)
-app.get('/usuarios/nearby', async (req, res) => {
-    const { lat, lon, radius } = req.query;
-
-    if (lat === undefined || lon === undefined || radius === undefined) {
-        return res.status(400).json({ error: 'Los parámetros lat, lon y radius son requeridos.' });
-    }
-
-    const latitude = parseFloat(lat);
-    const longitude = parseFloat(lon);
-    const radiusInMeters = parseFloat(radius);
-
-    if (isNaN(latitude) || isNaN(longitude) || isNaN(radiusInMeters) || radiusInMeters < 0) {
-        return res.status(400).json({ error: 'Parámetros inválidos: lat, lon deben ser números, radius debe ser un número no negativo.' });
-    }
-    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
-        return res.status(400).json({ error: 'Valores de latitud (-90 a 90) o longitud (-180 a 180) inválidos en los parámetros de búsqueda.' });
-    }
-
-    try {
-        const centerPointWkt = `POINT(${longitude} ${latitude})`;
-
-        const { data, error } = await supabase
-            .from('usuario')
-            .select(`
-                cod_usuario,
-                email,
-                nombre, -- Mapeado a 'Sobre mí' en frontend
-                username,
-                edad,
-                genero,
-                estudios_trabajo,
-                orientacion_sexual,
-                url_fotoperfil, -- <-- SELECCIONA LA NUEVA COLUMNA
-                location::geometry -> ST_Y as latitude,
-                location::geometry -> ST_X as longitude
-                -- Si tienes un campo 'descripcion', inclúyelo aquí:
-                -- descripcion
-            `)
-            .not('location', 'is', null)
-            .filter('location', 'st_dwithin', `${centerPointWkt}, ${radiusInMeters}`);
-
-        if (error) {
-            console.error('Error fetching nearby users:', error.message);
-            if (error.details) console.error('Error details:', error.details);
-            if (error.hint) console.error('Error hint:', error.hint);
-            throw new Error(`Database error finding nearby users: ${error.message}`);
-        }
-
-        res.json(data);
-
-    } catch (err) {
-        console.error('Unhandled error fetching nearby users:', err.message);
-        if (res.headersSent) return;
-        res.status(500).json({ error: 'Error al buscar usuarios cercanos.' });
-    }
-});
-
-
-// ====================== RUTAS DE EMPRESAS Y EVENTOS (Sin cambios aquí) ======================
-
-app.get('/empresas/:nif/eventos', async (req, res) => {
-    try {
-        const { data, error } = await supabase
-            .from('evento')
-            .select(`
-                cod_evento,
-                nombre,
-                hora_inicio,
-                hora_finalizacion,
-                local:cod_local(Nombre, Aforo)
-            `)
-            .eq('NIF', req.params.nif);
-
-        if (error) { console.error('Error fetching company events:', error.message); throw error; }
-        res.json(data);
-    } catch (err) {
-        console.error('Unhandled error fetching company events:', err.message);
-        if (res.headersSent) return;
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.get('/eventos', async (req, res) => {
-    try {
-        const { data, error } = await supabase
-            .from('evento')
-            .select(`
-                cod_evento,
-                nombre,
-                hora_inicio,
-                hora_finalizacion,
-                local:cod_local(Nombre, Aforo),
-                empresa:NIF(Nombre)
-            `);
-
-        if (error) { console.error('Error fetching all events:', error.message); throw error; }
-        res.json(data);
-    } catch (err) {
-        console.error('Unhandled error fetching all events:', err.message);
-        if (res.headersSent) return;
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.get('/eventos/:id', async (req, res) => {
-    try {
-        const { data, error } = await supabase
-            .from('evento')
-            .select(`
-                cod_evento,
-                nombre,
-                hora_inicio,
-                hora_finalizacion,
-                local:cod_local(Nombre, Aforo, Direccion),
-                empresa:NIF(Nombre)
-            `)
-            .eq('cod_evento', req.params.id)
-            .single();
-
-        if (error && error.code !== 'PGRST116') { console.error('Error fetching event by ID:', error.message); throw error; }
-
-        if (!data) { return res.status(404).json({ error: "Evento no encontrado" }); }
-
-        res.json(data);
-    } catch (err) {
-        console.error('Unhandled error fetching event by ID:', err.message);
-        if (res.headersSent) return;
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.put('/eventos/:id', async (req, res) => {
-    const { nombre, hora_inicio, hora_finalizacion } = req.body;
-
-    const updateData = {};
-    if (nombre !== undefined) updateData.nombre = nombre;
-    if (hora_inicio !== undefined) updateData.hora_inicio = hora_inicio;
-    if (hora_finalizacion !== undefined) updateData.hora_finalizacion = hora_finalizacion;
-
-    if (Object.keys(updateData).length === 0) {
-        return res.status(400).json({ error: "No se proporcionaron campos para actualizar" });
-    }
-
-    try {
-        const { data, error } = await supabase
-            .from('evento')
-            .update(updateData)
-            .eq('cod_evento', req.params.id)
-            .select();
-
-        if (error) { console.error('Error updating event:', error.message); throw error; }
-
-        if (!data || data.length === 0) {
-            return res.status(404).json({ error: "Evento no encontrado para actualizar" });
-        }
-
-        res.json(data[0]);
-    } catch (err) {
-        console.error('Unhandled error updating event:', err.message);
-        if (res.headersSent) return;
-        res.status(500).json({ error: err.message });
-    }
-});
-
-
-// Inicia el servidor
 app.listen(port, () => {
-    console.log(`Backend corriendo en http://localhost:${port}`);
+    console.log(`Servidor backend corriendo en http://localhost:${port}`);
+    console.log(`Clave secreta JWT: ${JWT_SECRET}`);
 });

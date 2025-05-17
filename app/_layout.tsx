@@ -49,6 +49,13 @@ export default function RootLayout() {
       */}
             <Stack.Screen name="eventos_gaudi" options={{ headerShown: false }} />
 
+            {/*
+        Stack.Screen name="eventos_donvito"
+        Define la nueva pantalla eventos_donvito.tsx que está directamente en la carpeta `app`.
+        options={{ headerShown: false }} oculta el encabezado por defecto para esta pantalla.
+      */}
+            <Stack.Screen name="eventos_don_vito" options={{ headerShown: false }} />
+
 
             {/*
         La pantalla not-found de nivel superior (app/+not-found.tsx)

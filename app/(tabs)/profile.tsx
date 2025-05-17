@@ -12,144 +12,153 @@ import {
     TouchableOpacity,
     Image,
     StatusBar,
-    ActivityIndicator, // Para indicar que se está cargando el perfil o guardando
+    ActivityIndicator,
+    SafeAreaView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
-import { Ionicons } from '@expo/vector-icons'; // Usaremos Ionicons para iconos
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Para obtener el token
-import { Picker } from '@react-native-picker/picker'; // Para los desplegables
-// Si necesitas useRouter para navegar a otras partes de la app (fuera de las pestañas), mantenlo:
-// import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Picker } from '@react-native-picker/picker';
+import { useRouter } from 'expo-router';
 
 // Define la URL base de tu backend
-const API_BASE_URL = 'http://192.168.1.142:3001'; // <-- IP de tu ordenador/servidor
+// IMPORTANTE: Reemplaza esta URL con la URL real de tu API de backend
+const API_BASE_URL = 'http://192.168.1.142:3001'; // <-- IP CORREGIDA
 
 // Clave para AsyncStorage donde guardamos el token JWT
-const AUTH_TOKEN_KEY = 'userToken'; // Asegúrate de que esta clave coincide con la que usas en login.tsx
+const AUTH_TOKEN_KEY = 'userToken';
 
 // Definimos la interfaz para los datos del perfil que esperamos del backend
 interface UserProfile {
-    cod_usuario: number; // O string, según cómo lo manejes en backend/DB
-    email: string;
-    nombre: string; // Nombre (puede ser diferente al username) - Mapeado a 'Sobre mí' en frontend
-    username: string; // Nickname
-    edad?: number;
-    genero?: string; // Nuevo campo
-    estudios_trabajo?: string;
-    orientacion_sexual?: string;
-    url_fotoperfil?: string; // <-- USAR LA NUEVA COLUMNA
-    foto_url_1?: string; // Mantener para referencia si es necesario, aunque no se edite aquí
-    foto_url_2?: string; // Mantener para referencia si es necesario, aunque no se edite aquí
-    latitude?: number; // Si quieres mostrar/editar ubicación
-    longitude?: number; // Si quieres mostrar/editar ubicación
-    // Si tienes un campo 'descripcion' en DB, añádelo aquí
-    // descripcion?: string;
+    cod_usuario: number;
+    email: string | null;
+    nombre: string | null; // Mapeado a 'Sobre mí' en frontend
+    username: string | null;
+    edad: number | null | undefined;
+    genero: string | null;
+    estudios_trabajo: string | null;
+    orientacion_sexual: string | null;
+    url_fotoperfil: string | null;
+    foto_url_1: string | null;
+    foto_url_2: string | null;
 }
 
 
-export default function ProfileScreen() { // Renombrado a ProfileScreen
-    // Si necesitas useRouter para navegar a otras partes de la app (fuera de las pestañas), mantenlo:
-    // const router = useRouter();
+export default function ProfileScreen() {
+    const router = useRouter();
 
-    // Estado para almacenar los datos originales del perfil cargado
     const [originalProfileData, setOriginalProfileData] = useState<UserProfile | null>(null);
 
-    // Estados para almacenar los datos del perfil que se pueden editar
-    const [codUsuario, setCodUsuario] = useState<string | null>(null); // Para el ID/email del usuario (no editable)
-    const [email, setEmail] = useState<string>(''); // Editable
-    const [username, setUsername] = useState<string>(''); // Editable (corresponde a 'nombre' en DB y 'username' en signup)
-    const [edad, setEdad] = useState<string>(''); // Como string para el TextInput
-    const [genero, setGenero] = useState<string>(''); // Editable (Picker)
-    const [estudiosTrabajo, setEstudiosTrabajo] = useState<string>(''); // Editable (Botones)
-    const [orientacionSexual, setOrientacionSexual] = useState<string>(''); // Editable (Picker)
-    const [description, setDescription] = useState<string>(''); // Editable (corresponde a 'nombre' o un nuevo campo 'descripcion'?)
-
-    const [password, setPassword] = useState<string>(''); // Para establecer una NUEVA contraseña (no se carga la existente)
-
-    // Estados para la foto de perfil (una sola)
-    const [profilePhotoUri, setProfilePhotoUri] = useState<string | null>(null); // URI de la foto (URL de DB o URI local de nueva foto)
-    const [newProfilePhotoFile, setNewProfilePhotoFile] = useState<any>(null); // Archivo de la nueva foto seleccionada
+    const [codUsuario, setCodUsuario] = useState<string | null>(null);
+    const [email, setEmail] = useState<string>('');
+    const [username, setUsername] = useState<string>('');
+    const [edad, setEdad] = useState<string>('');
+    const [genero, setGenero] = useState<string>('');
+    const [estudiosTrabajo, setEstudiosTrabajo] = useState<string>('');
+    const [orientacionSexual, setOrientacionSexual] = useState<string>('');
+    const [description, setDescription] = useState<string>(''); // Mapeado a 'nombre' en DB
 
 
-    const [isLoadingProfile, setIsLoadingProfile] = useState(true); // Para cargar el perfil
-    const [isSaving, setIsSaving] = useState(false); // Para indicar que se están guardando los cambios
+    const [password, setPassword] = useState<string>('');
+
+    const [profilePhotoUri, setProfilePhotoUri] = useState<string | null>(null);
+    const [newProfilePhotoFile, setNewProfilePhotoFile] = useState<any>(null);
 
 
-    // --- Cargar datos del perfil al montar la pantalla ---
+    const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+
+    // Cargar datos del perfil al montar la pantalla
     useEffect(() => {
         const fetchProfile = async () => {
             setIsLoadingProfile(true);
+            setError(null);
+
+            console.log('DEBUG: fetchProfile started');
             try {
+                console.log('DEBUG: Attempting to get token from AsyncStorage');
                 const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
-                // Eliminada la comprobación de token y redirección aquí.
-                // Se asume que el layout superior ya ha verificado la autenticación.
+                console.log(`DEBUG: Token from AsyncStorage: ${token ? 'Found' : 'Not Found'}`);
 
-                // Si por alguna razón no hay token (a pesar de la navegación), la llamada al backend fallará con 401.
-                // Tu backend ya maneja el 401 para la ruta /usuarios/profile.
 
-                const response = await fetch(`${API_BASE_URL}/usuarios/profile`, {
+                if (!token) {
+                    console.warn('No token found, redirecting to login.');
+                    setIsLoadingProfile(false);
+                    Alert.alert('Sesión requerida', 'Por favor, inicia sesión para ver tu perfil.');
+                    router.replace('/(auth)/login');
+                    return;
+                }
+
+                const profileUrl = `${API_BASE_URL}/usuarios/profile`;
+                console.log(`DEBUG: Attempting to fetch profile from: ${profileUrl}`);
+
+                const response = await fetch(profileUrl, {
                     method: 'GET',
                     headers: {
-                        'Authorization': `Bearer ${token}`, // Incluir el token en la cabecera (necesario por backend)
+                        'Authorization': `Bearer ${token}`,
                     },
                 });
 
-                const data = await response.json();
+                console.log(`DEBUG: Fetch response status: ${response.status}`);
+
+                const responseData = await response.json();
+                console.log('DEBUG: Response data:', responseData);
+
 
                 if (!response.ok) {
-                    // Si el backend retorna un error (incluyendo 401 si el token es inválido/expirado), mostrar alerta.
-                    Alert.alert('Error al cargar perfil', data.error || 'Error desconocido.');
-                    console.error('Error fetching profile:', data);
-                    // Considerar redirigir a login si el error es de autenticación (401)
-                    // Esto podría ser redundante si el layout superior ya lo hace, pero es una capa de seguridad adicional.
+                    console.error('Error fetching profile:', responseData.error || response.statusText);
                     if (response.status === 401) {
-                        // Si necesitas redirigir a login desde aquí en caso de error de auth:
-                        // Asegúrate de importar useRouter de 'expo-router'
-                        // const router = useRouter();
-                        // router.replace('/(auth)/login');
+                        Alert.alert('Sesión expirada', 'Tu sesión ha expirado. Por favor, inicia sesión de nuevo.');
+                        await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
+                        router.replace('/(auth)/login');
+                    } else {
+                        setError(responseData.error || 'Error desconocido al cargar el perfil.');
+                        Alert.alert('Error', responseData.error || 'Error al cargar perfil.');
                     }
                     return;
                 }
 
-                // Guardar los datos originales cargados
-                setOriginalProfileData(data.profile);
+                if (responseData.profile) {
+                    const profile = responseData.profile;
+                    setOriginalProfileData(profile);
 
-                // Rellenar los estados con los datos del perfil
-                setCodUsuario(data.profile.cod_usuario); // Guardar el ID/email autogenerado
-                setEmail(data.profile.email || '');
-                // Asumiendo que 'nombre' en DB es el nombre real y 'username' es el username único
-                // Si 'nombre' es el username duplicado, ajusta esto.
-                setUsername(data.profile.username || ''); // Usamos 'username' para el campo nickname visible
-                // Si tienes un campo 'real_name' en DB, úsalo aquí: setUsername(data.profile.real_name || '');
+                    setCodUsuario(String(profile.cod_usuario));
+                    setEmail(profile.email || '');
+                    setUsername(profile.username || '');
+                    setEdad(profile.edad !== null && profile.edad !== undefined ? String(profile.edad) : '');
+                    setGenero(profile.genero || '');
+                    setEstudiosTrabajo(profile.estudios_trabajo || '');
+                    setOrientacionSexual(profile.orientacion_sexual || '');
+                    setDescription(profile.nombre || '');
 
-                setEdad(data.profile.edad ? String(data.profile.edad) : ''); // Convertir número a string para TextInput
-                setGenero(data.profile.genero || ''); // Usar '' si es null
-                setEstudiosTrabajo(data.profile.estudios_trabajo || ''); // Usar '' si es null
-                setOrientacionSexual(data.profile.orientacion_sexual || ''); // Usar '' si es null
-                // Si tienes un campo 'descripcion' en DB, úsalo aquí: setDescription(data.profile.descripcion || '');
-                // Si no tienes 'descripcion' en DB, puedes inicializar description con otro campo o eliminarlo.
-                // Por ahora, lo inicializamos con el campo 'nombre' si no hay campo de descripción real.
-                setDescription(data.profile.nombre || ''); // Mapeando description a 'nombre' temporalmente si no hay campo real de descripción
+                    setProfilePhotoUri(profile.url_fotoperfil || null);
 
-                // Cargar URL de la foto de perfil si existe
-                setProfilePhotoUri(data.profile.url_fotoperfil || null); // <-- USAR LA NUEVA COLUMNA
+                    console.log('DEBUG: Profile data loaded successfully.');
 
-            } catch (error: any) {
-                console.error('Error fetching profile:', error);
-                // Mostrar error de conexión si falla la petición
-                Alert.alert('Error de conexión', 'No se pudo cargar el perfil. Asegúrate de que el backend está corriendo.');
+                } else {
+                    console.warn('Profile data not found in response.profile:', responseData);
+                    setError('Datos de perfil incompletos recibidos.');
+                    Alert.alert('Error', 'Datos de perfil incompletos.');
+                }
+
+            } catch (err: any) {
+                console.error("Network or unexpected error fetching profile:", err);
+                setError('Error de conexión al cargar el perfil. Asegúrate de que el backend está corriendo y la URL es correcta.');
+                Alert.alert('Error de conexión', 'No se pudo cargar el perfil.');
             } finally {
+                console.log('DEBUG: fetchProfile finally block executed.');
                 setIsLoadingProfile(false);
             }
         };
 
-        // Asegurarse de que la carga se ejecute solo una vez al montar.
         fetchProfile();
-    }, []); // El array vacío asegura que se ejecuta solo una vez al montar
+    }, []);
 
 
-    // --- Lógica de selección de una sola foto ---
+    // Lógica de selección de una sola foto
     const pickProfileImage = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
@@ -160,117 +169,105 @@ export default function ProfileScreen() { // Renombrado a ProfileScreen
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
-            aspect: [1, 1], // Aspecto cuadrado para foto de perfil
-            quality: 1,
+            aspect: [1, 1],
+            quality: 0.7,
         });
 
         if (!result.canceled && result.assets && result.assets.length > 0) {
             const selectedAsset = result.assets[0];
-            setProfilePhotoUri(selectedAsset.uri); // Guardar la URI local para previsualización
-            // Guardar la información del archivo para enviarla al backend
+            setProfilePhotoUri(selectedAsset.uri);
+            const fileUri = selectedAsset.uri;
+            const fileName = fileUri.split('/').pop() || `upload_${Date.now()}.jpg`;
+            const fileType = selectedAsset.mimeType || 'image/jpeg';
+
             setNewProfilePhotoFile({
-                uri: selectedAsset.uri,
-                name: selectedAsset.uri.split('/').pop(), // Obtener nombre del archivo de la URI
-                type: 'image/jpeg', // O el tipo MIME real si ImagePicker lo proporciona
+                uri: fileUri,
+                name: fileName,
+                type: fileType,
             });
         }
     };
 
-    // --- Lógica para manejar la eliminación de la foto de perfil ---
+    // Lógica para manejar la eliminación de la foto de perfil
     const handleRemoveProfilePhoto = async () => {
-        // Lógica para eliminar la foto en el backend
-        // Esto requiere un endpoint DELETE específico o un indicador en el PUT.
-        // Por ahora, solo limpia el estado local y muestra una alerta.
-        Alert.alert('Info', 'Eliminar foto de perfil (requiere implementación en backend).');
-        setProfilePhotoUri(null); // Limpia la URI local
-        setNewProfilePhotoFile(null); // Asegura que no se envíe un archivo nuevo si se seleccionó antes de eliminar
-        // Deberías hacer una llamada API aquí para eliminar la foto en Supabase Storage y poner url_fotoperfil a NULL en DB.
-        // Ejemplo (conceptual, requiere endpoint de backend):
-        // const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
-        // if (token && codUsuario) {
-        //      fetch(`${API_BASE_URL}/usuarios/${codUsuario}/profile_photo`, {
-        //          method: 'DELETE',
-        //          headers: { 'Authorization': `Bearer ${token}` },
-        //      })
-        //      .then(response => {
-        //          if (response.ok) {
-        //              Alert.alert('Éxito', 'Foto de perfil eliminada.');
-        //              setProfilePhotoUri(null); // Limpia la URI local si el backend confirma
-        //              setNewProfilePhotoFile(null);
-        //          } else {
-        //              Alert.alert('Error', 'No se pudo eliminar la foto.');
-        //          }
-        //      })
-        //      .catch(error => console.error('Error deleting photo:', error));
-        // }
+        Alert.alert(
+            'Confirmar Eliminación',
+            '¿Estás seguro de que quieres eliminar tu foto de perfil?',
+            [
+                {
+                    text: 'Cancelar',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Eliminar',
+                    onPress: async () => {
+                        // Simplificado: solo limpia localmente y marca para eliminación al guardar
+                        setProfilePhotoUri(null);
+                        setNewProfilePhotoFile(null);
+                        Alert.alert('Info', 'Foto de perfil marcada para eliminación (Guarda los cambios).');
+                    },
+                },
+            ],
+            { cancelable: true }
+        );
     };
 
 
-    // --- Lógica para guardar los cambios ---
+    // Lógica para guardar los cambios
     const handleSave = async () => {
         setIsSaving(true);
+        setError(null);
 
-        // Validar campos si es necesario (ej. formato de email si se cambió)
-        const emailRegex = /^\S+@\S+\.\S+$/; // Corrected the regex
+        const emailRegex = /^\S+@\S+\.\S+$/;
         if (email && !emailRegex.test(email)) {
             Alert.alert('Error', 'Por favor, introduce un email válido.');
             setIsSaving(false);
             return;
         }
 
-        // Validar que tenemos el ID del usuario para la URL de actualización
         if (!codUsuario) {
             Alert.alert('Error', 'No se pudo obtener la información del usuario para guardar.');
             setIsSaving(false);
             return;
         }
 
-        // Crear FormData para enviar datos mixtos (texto y archivo)
         const formData = new FormData();
-        let hasChanges = false; // Flag to track if any changes were made
+        let hasChanges = false;
 
-
-        // Añadir campos de texto al FormData SOLO si han sido modificados O si se envían vacíos para poner a NULL
-        // Comparamos con los datos originales cargados (originalProfileData)
-        // Si originalProfileData es null (ej. error de carga inicial), enviaremos todos los campos no vacíos.
+        const originalEmail = originalProfileData?.email || '';
         const currentEmail = email.trim();
-        if (originalProfileData?.email !== currentEmail) { // Si el email cambió o se vació
-            formData.append('email', currentEmail); // Enviar el valor actual (vacío o con email)
+        if (originalEmail !== currentEmail) {
+            formData.append('email', currentEmail);
             hasChanges = true;
         }
 
+        const originalUsername = originalProfileData?.username || '';
         const currentUsername = username.trim();
-        if (originalProfileData?.username !== currentUsername) { // Si el username cambió o se vació
+        if (originalUsername !== currentUsername) {
             formData.append('username', currentUsername);
             hasChanges = true;
         }
 
+        const originalDescription = originalProfileData?.nombre || '';
         const currentDescription = description.trim();
-        // Asumiendo que description mapea a 'nombre' en DB:
-        if (originalProfileData?.nombre !== currentDescription) { // Si la descripción cambió o se vació
+        if (originalDescription !== currentDescription) {
             formData.append('nombre', currentDescription);
             hasChanges = true;
         }
-        // Si tienes un campo 'descripcion' real en DB, usa eso en lugar de 'nombre'.
-        // if (originalProfileData?.descripcion !== currentDescription) { formData.append('descripcion', currentDescription); hasChanges = true; }
 
-
-        // Manejo de la contraseña: Solo actualizar si se proporciona una nueva contraseña
         const currentPassword = password.trim();
-        if (currentPassword !== '') { // Si se introdujo una nueva contraseña
+        if (currentPassword !== '') {
             formData.append('password', currentPassword);
             hasChanges = true;
         }
-        // Si currentPassword está vacío, no se añade al FormData, el backend no lo actualizará.
 
-
+        const originalEdad = originalProfileData?.edad !== null && originalProfileData?.edad !== undefined ? String(originalProfileData.edad) : '';
         const currentEdad = edad.trim();
-        const originalEdadString = originalProfileData?.edad ? String(originalProfileData.edad) : '';
-        if (originalEdadString !== currentEdad) { // Si la edad cambió o se vació
+        if (originalEdad !== currentEdad) {
             if (currentEdad !== '') {
                 const parsedEdad = parseInt(currentEdad, 10);
                 if (!isNaN(parsedEdad)) {
-                    formData.append('edad', String(parsedEdad)); // Enviar como string, backend parseará a int
+                    formData.append('edad', String(parsedEdad));
                     hasChanges = true;
                 } else {
                     Alert.alert('Error', 'El campo edad debe ser un número válido.');
@@ -278,24 +275,25 @@ export default function ProfileScreen() { // Renombrado a ProfileScreen
                     return;
                 }
             } else {
-                formData.append('edad', ''); // Enviar vacío para que backend lo ponga a NULL
+                formData.append('edad', '');
                 hasChanges = true;
             }
         }
 
+        const originalGenero = originalProfileData?.genero || '';
         const currentGenero = genero.trim();
-        if (originalProfileData?.genero !== currentGenero) { // Si el género cambió o se vació
+        if (originalGenero !== currentGenero) {
             formData.append('genero', currentGenero);
             hasChanges = true;
         } else if (currentGenero === '' && originalProfileData?.genero !== null) {
-            // Caso especial: si el original tenía valor y ahora está vacío, enviar vacío
             formData.append('genero', '');
             hasChanges = true;
         }
 
 
+        const originalEstudiosTrabajo = originalProfileData?.estudios_trabajo || '';
         const currentEstudiosTrabajo = estudiosTrabajo.trim();
-        if (originalProfileData?.estudios_trabajo !== currentEstudiosTrabajo) { // Si estudios/trabajo cambió o se vació
+        if (originalEstudiosTrabajo !== currentEstudiosTrabajo) {
             formData.append('estudios_trabajo', currentEstudiosTrabajo);
             hasChanges = true;
         } else if (currentEstudiosTrabajo === '' && originalProfileData?.estudios_trabajo !== null) {
@@ -304,8 +302,9 @@ export default function ProfileScreen() { // Renombrado a ProfileScreen
         }
 
 
+        const originalOrientacionSexual = originalProfileData?.orientacion_sexual || '';
         const currentOrientacionSexual = orientacionSexual.trim();
-        if (originalProfileData?.orientacion_sexual !== currentOrientacionSexual) { // Si la orientación cambió o se vació
+        if (originalOrientacionSexual !== currentOrientacionSexual) {
             formData.append('orientacion_sexual', currentOrientacionSexual);
             hasChanges = true;
         } else if (currentOrientacionSexual === '' && originalProfileData?.orientacion_sexual !== null) {
@@ -313,85 +312,64 @@ export default function ProfileScreen() { // Renombrado a ProfileScreen
             hasChanges = true;
         }
 
-
-        // --- Manejo de subida de la nueva foto de perfil ---
-        if (newProfilePhotoFile) { // Si se seleccionó un nuevo archivo de foto
-            // El nombre del campo debe coincidir con lo que espera Multer en el backend ('fotoperfil')
+        // Manejo de subida de la nueva foto de perfil
+        if (newProfilePhotoFile) {
             formData.append('fotoperfil', newProfilePhotoFile as any);
             hasChanges = true;
         }
-        // Check if the photo was removed (profilePhotoUri is null, but originalProfileData had a url_fotoperfil)
-        // This requires backend logic to handle deletion based on a flag or separate endpoint.
-        // For now, we'll just note if the local state indicates removal.
-        // If you implement delete logic in backend PUT, add a flag here:
-        // if (profilePhotoUri === null && originalProfileData?.url_fotoperfil) {
-        //     formData.append('delete_profile_photo', 'true');
-        //     hasChanges = true;
-        // }
+        // Manejo de eliminación de foto de perfil
+        if (originalProfileData?.url_fotoperfil && profilePhotoUri === null) {
+            // Asegúrate de que el backend maneje la ausencia de 'fotoperfil' en FormData para poner url_fotoperfil a NULL
+            hasChanges = true;
+        }
 
-
-        // Check if any changes were made (text fields or new photo)
         if (!hasChanges) {
             Alert.alert('Información', 'No hay cambios para guardar.');
             setIsSaving(false);
             return;
         }
 
-
         try {
             const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
             if (!token) {
                 Alert.alert('Error', 'No se encontró token de autenticación.');
-                // router.replace('/(auth)/login');
+                setIsSaving(false);
                 return;
             }
 
-            // Llama a la ruta de actualización de perfil en tu backend (PUT)
-            const response = await fetch(`${API_BASE_URL}/usuarios/${codUsuario}`, { // Usar el ID del usuario cargado
-                method: 'PUT', // Usar PUT para actualizar
-                // No establecer Content-Type para FormData
+            const response = await fetch(`${API_BASE_URL}/usuarios/${codUsuario}`, {
+                method: 'PUT',
                 headers: {
-                    'Authorization': `Bearer ${token}`, // Incluir el token
-                    // Content-Type se establece automáticamente por FormData
+                    'Authorization': `Bearer ${token}`,
                 },
-                body: formData, // Enviar FormData
+                body: formData,
             });
 
             const data = await response.json();
 
             if (!response.ok) {
-                Alert.alert('Error al guardar', data.error || 'Error desconocido.');
-                console.error('Error saving profile:', data);
-                // Si el error es por token inválido/expirado, redirigir a login
+                console.error('Error saving profile:', data.error || response.statusText);
+                Alert.alert('Error al guardar', data.error || 'Error desconocido al guardar.');
+
                 if (response.status === 401) {
-                    // router.replace('/(auth)/login');
+                    Alert.alert('Sesión expirada', 'Tu sesión ha expirado. Por favor, inicia sesión de nuevo.');
+                    await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
+                    router.replace('/(auth)/login');
                 }
                 return;
             }
 
             Alert.alert('Éxito', 'Perfil actualizado correctamente.');
 
-            // Actualizar los estados locales con los datos de la respuesta si el backend los retorna
             if (data.profile) {
-                setOriginalProfileData(data.profile); // Actualizar los datos originales
-                setEmail(data.profile.email || '');
-                setUsername(data.profile.username || '');
-                setEdad(data.profile.edad ? String(data.profile.edad) : '');
-                setGenero(data.profile.genero || '');
-                setEstudiosTrabajo(data.profile.estudios_trabajo || '');
-                setOrientacionSexual(data.profile.orientacion_sexual || '');
-                setDescription(data.profile.nombre || ''); // Mapeando description a 'nombre'
-                setProfilePhotoUri(data.profile.url_fotoperfil || null); // <-- Actualizar la URI de la foto de perfil
+                setOriginalProfileData(data.profile);
             }
 
-            // Limpiar el campo de contraseña después de guardar
             setPassword('');
-            // Limpiar el archivo de nueva foto seleccionada después de intentar guardar
             setNewProfilePhotoFile(null);
 
-
         } catch (error: any) {
-            console.error('Error saving profile:', error);
+            console.error('Network or unexpected error saving profile:', error);
             Alert.alert('Error de conexión', 'No se pudo conectar con el servidor para guardar los cambios.');
         } finally {
             setIsSaving(false);
@@ -399,7 +377,7 @@ export default function ProfileScreen() { // Renombrado a ProfileScreen
     };
 
 
-    // --- Renderizado condicional mientras se carga el perfil ---
+    // Renderizado condicional mientras se carga el perfil
     if (isLoadingProfile) {
         return (
             <View style={styles.loadingContainer}>
@@ -409,10 +387,20 @@ export default function ProfileScreen() { // Renombrado a ProfileScreen
         );
     }
 
+    // Mostrar mensaje de error si falla la carga inicial
+    if (error) {
+        return (
+            <SafeAreaView style={styles.centered}>
+                <Text style={styles.errorText}>{error}</Text>
+            </SafeAreaView>
+        );
+    }
 
+    // Mostrar el formulario si no está cargando y no hay error
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="#1e1e1e" />
+
             <View style={styles.headerBar}>
                 <Text style={styles.title}>Editar Perfil</Text>
             </View>
@@ -423,330 +411,288 @@ export default function ProfileScreen() { // Renombrado a ProfileScreen
             >
                 <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
 
-                    {/* Sección de Foto de Perfil (una sola) */}
-                    <Text style={[styles.label, { alignSelf: 'center', marginBottom: 10 }]}>Foto de Perfil (Opcional)</Text>
-                    <View style={styles.photoUploadContainerSingle}> {/* Nuevo contenedor para una sola foto */}
-                        <TouchableOpacity
-                            style={styles.imagePickerSingle} // Nuevo estilo para el área tocable de la única foto
-                            onPress={pickProfileImage} // Llama a la función para una sola foto
-                        >
-                            {profilePhotoUri ? (
-                                <Image source={{ uri: profilePhotoUri }} style={styles.profileImageLarge} /> // Usar el estilo grande
-                            ) : (
-                                <View style={styles.placeholderLarge}> {/* Nuevo placeholder grande */}
-                                    <Ionicons name="camera-outline" size={50} color="#aaa" /> {/* Icono más grande */}
-                                    <Text style={styles.placeholderTextLarge}>Seleccionar Foto</Text> {/* Texto más grande */}
-                                </View>
-                            )}
-                        </TouchableOpacity>
-                        {/* Botón para eliminar Foto de Perfil (Opcional) */}
-                        {profilePhotoUri && (
-                            <TouchableOpacity
-                                style={styles.removePhotoButtonSingle} // Nuevo estilo para el botón de eliminar
-                                onPress={handleRemoveProfilePhoto} // Llama a la función de eliminar
-                            >
-                                <Ionicons name="close-circle" size={28} color="red" /> {/* Icono más grande */}
-                            </TouchableOpacity>
+                    {/* Sección de Foto de Perfil */}
+                    <TouchableOpacity onPress={pickProfileImage} style={styles.photoContainer}>
+                        {profilePhotoUri ? (
+                            <Image source={{ uri: profilePhotoUri }} style={styles.profileImage} />
+                        ) : (
+                            <View style={styles.profileImagePlaceholder}>
+                                <Ionicons name="camera" size={50} color="#ccc" />
+                                <Text style={styles.photoPlaceholderText}>Subir Foto</Text>
+                            </View>
                         )}
-                    </View>
+                        <View style={styles.cameraIcon}>
+                            <Ionicons name="camera" size={24} color="#fff" />
+                        </View>
+                    </TouchableOpacity>
 
+                    {profilePhotoUri && (
+                        <TouchableOpacity onPress={handleRemoveProfilePhoto} style={styles.removePhotoButton}>
+                            <Text style={styles.removePhotoButtonText}>Eliminar Foto de Perfil</Text>
+                        </TouchableOpacity>
+                    )}
 
-                    {/* Campo Email (No editable si cod_usuario es el email) */}
-                    <Text style={styles.label}>Correo Electrónico</Text>
+                    {/* Campos de texto y selección */}
+                    <Text style={styles.label}>Username:</Text>
                     <TextInput
-                        style={[styles.input, styles.disabledInput]} // Estilo para indicar que no es editable
-                        value={email}
-                        editable={false} // Hacer que el campo no sea editable
-                        placeholderTextColor="#aaa"
-                    />
-                    {/* Si el email es editable, usa el input normal y onChangeText={setEmail} */}
-                    {/* <TextInput
                         style={styles.input}
-                        placeholder="yourname@gmail.com"
+                        value={username}
+                        onChangeText={setUsername}
+                        placeholder="Tu nombre de usuario"
+                        placeholderTextColor="#aaa"
+                        autoCapitalize="none"
+                    />
+
+                    <Text style={styles.label}>Email:</Text>
+                    <TextInput
+                        style={styles.input}
+                        value={email}
+                        onChangeText={setEmail}
+                        placeholder="Tu correo electrónico"
                         placeholderTextColor="#aaa"
                         keyboardType="email-address"
                         autoCapitalize="none"
-                        value={email}
-                        onChangeText={setEmail}
-                    /> */}
-
-
-                    {/* Campo Nickname / Username */}
-                    <Text style={styles.label}>Username</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Tu Username"
-                        placeholderTextColor="#aaa"
-                        autoCapitalize="none" // Username suele ser sin mayúsculas
-                        value={username}
-                        onChangeText={setUsername}
                     />
 
-                    {/* Campo Nueva Contraseña */}
-                    <Text style={styles.label}>Nueva Contraseña (Dejar vacío para no cambiar)</Text>
+                    {/* Campo "Sobre mí" */}
+                    <Text style={styles.label}>Sobre mí:</Text>
                     <TextInput
-                        style={styles.input}
-                        placeholder="********"
-                        placeholderTextColor="#aaa"
-                        secureTextEntry
-                        value={password} // Este estado solo guarda la nueva contraseña a establecer
-                        onChangeText={setPassword}
-                    />
-
-                    {/* Campo Edad */}
-                    <Text style={styles.label}>Edad (Opcional)</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Ej: 25"
-                        placeholderTextColor="#aaa"
-                        keyboardType="numeric"
-                        value={edad}
-                        onChangeText={setEdad}
-                    />
-
-                    {/* Campo Género (Desplegable) */}
-                    <Text style={styles.label}>Género (Opcional)</Text>
-                    <View style={styles.pickerContainer}>
-                        <Ionicons name="person" size={20} color="#aaa" style={styles.pickerIcon} />
-                        <Picker
-                            selectedValue={genero}
-                            onValueChange={(itemValue: string) => setGenero(itemValue)}
-                            style={styles.picker}
-                            itemStyle={styles.pickerItem}
-                        >
-                            <Picker.Item label="Selecciona tu género" value="" enabled={false} style={{ color: '#aaa' }} />
-                            <Picker.Item label="Masculino" value="Masculino" style={{ color: '#fff' }} />
-                            <Picker.Item label="Femenino" value="Femenino" style={{ color: '#fff' }} />
-                            <Picker.Item label="Otro" value="Otro" style={{ color: '#fff' }} />
-                        </Picker>
-                    </View>
-
-
-                    {/* Campo Estudios / Trabajo (Botones de Selección) */}
-                    <Text style={styles.label}>Estudios / Trabajo (Opcional)</Text>
-                    <View style={styles.selectionButtonContainer}>
-                        <TouchableOpacity
-                            style={[styles.selectionButton, estudiosTrabajo === 'Estudiante' && styles.selectionButtonSelected]}
-                            onPress={() => setEstudiosTrabajo('Estudiante')}
-                        >
-                            <Text style={[styles.selectionButtonText, estudiosTrabajo === 'Estudiante' && styles.selectionButtonTextSelected]}>Estudiante</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={[styles.selectionButton, estudiosTrabajo === 'Trabajando' && styles.selectionButtonSelected]}
-                            onPress={() => setEstudiosTrabajo('Trabajando')}
-                        >
-                            <Text style={[styles.selectionButtonText, estudiosTrabajo === 'Trabajando' && styles.selectionButtonTextSelected]}>Trabajando</Text>
-                        </TouchableOpacity>
-                        {/* Opción para deseleccionar */}
-                        {estudiosTrabajo !== '' && (
-                            <TouchableOpacity onPress={() => setEstudiosTrabajo('')} style={styles.clearSelectionButton}>
-                                <Ionicons name="close-circle-outline" size={20} color="#aaa" />
-                            </TouchableOpacity>
-                        )}
-                    </View>
-
-
-                    {/* Campo Orientación Sexual (Desplegable) */}
-                    <Text style={styles.label}>Orientación Sexual (Opcional)</Text>
-                    <View style={styles.pickerContainer}>
-                        <Ionicons name="heart" size={20} color="#aaa" style={styles.pickerIcon} />
-                        <Picker
-                            selectedValue={orientacionSexual}
-                            onValueChange={(itemValue: string) => setOrientacionSexual(itemValue)}
-                            style={styles.picker}
-                            itemStyle={styles.pickerItem}
-                        >
-                            <Picker.Item label="Selecciona tu orientación" value="" enabled={false} style={{ color: '#aaa' }} />
-                            <Picker.Item label="Heterosexual" value="Heterosexual" style={{ color: '#fff' }} />
-                            <Picker.Item label="Bisexual" value="Bisexual" style={{ color: '#fff' }} />
-                            <Picker.Item label="Homosexual" value="Homosexual" style={{ color: '#fff' }} />
-                            <Picker.Item label="Otro" value="Otro" style={{ color: '#fff' }} />
-                        </Picker>
-                    </View>
-
-                    {/* Campo Descripción */}
-                    <Text style={styles.label}>Sobre mí (Opcional)</Text>
-                    <TextInput
-                        style={[styles.input, styles.textArea]}
-                        placeholder="Cuéntanos sobre ti..."
-                        placeholderTextColor="#aaa"
-                        multiline
-                        numberOfLines={4}
-                        textAlignVertical="top"
+                        style={[styles.input, styles.multilineInput]}
                         value={description}
                         onChangeText={setDescription}
+                        placeholder="Cuéntanos algo sobre ti"
+                        placeholderTextColor="#aaa"
+                        multiline={true}
+                        numberOfLines={4}
+                        textAlignVertical="top"
                     />
 
+                    <Text style={styles.label}>Edad:</Text>
+                    <TextInput
+                        style={styles.input}
+                        value={edad}
+                        onChangeText={setEdad}
+                        placeholder="Tu edad"
+                        placeholderTextColor="#aaa"
+                        keyboardType="number-pad"
+                    />
 
-                </ScrollView>
-            </KeyboardAvoidingView>
+                    {/* Campo Género (Picker) */}
+                    <Text style={styles.label}>Género:</Text>
+                    <View style={styles.pickerContainer}>
+                        <Picker
+                            selectedValue={genero}
+                            onValueChange={(itemValue, itemIndex) => setGenero(itemValue)}
+                            style={styles.picker}
+                            dropdownIconColor="#fff"
+                        >
+                            <Picker.Item label="Selecciona tu género" value="" enabled={false} style={{ color: '#aaa' }} />
+                            <Picker.Item label="Masculino" value="Masculino" />
+                            <Picker.Item label="Femenino" value="Femenino" />
+                            <Picker.Item label="No binario" value="No binario" />
+                            <Picker.Item label="Prefiero no decir" value="Prefiero no decir" />
+                        </Picker>
+                    </View>
 
-            <View style={styles.footer}>
-                <LinearGradient colors={['#e14eca', '#f4524d']} style={styles.buttonGradient}>
-                    <TouchableOpacity onPress={handleSave} style={styles.buttonInner} disabled={isSaving}>
+                    {/* Campo Estudios/Trabajo */}
+                    <Text style={styles.label}>Estudios/Trabajo:</Text>
+                    <TextInput
+                        style={styles.input}
+                        value={estudiosTrabajo}
+                        onChangeText={setEstudiosTrabajo}
+                        placeholder="Tu ocupación o nivel de estudios"
+                        placeholderTextColor="#aaa"
+                    />
+
+                    {/* Campo Orientación Sexual (Picker) */}
+                    <Text style={styles.label}>Orientación Sexual:</Text>
+                    <View style={styles.pickerContainer}>
+                        <Picker
+                            selectedValue={orientacionSexual}
+                            onValueChange={(itemValue, itemIndex) => setOrientacionSexual(itemValue)}
+                            style={styles.picker}
+                            dropdownIconColor="#fff"
+                        >
+                            <Picker.Item label="Selecciona tu orientación" value="" enabled={false} style={{ color: '#aaa' }} />
+                            <Picker.Item label="Heterosexual" value="Heterosexual" />
+                            <Picker.Item label="Homosexual" value="Homosexual" />
+                            <Picker.Item label="Bisexual" value="Bisexual" />
+                            <Picker.Item label="Pansexual" value="Pansexual" />
+                            <Picker.Item label="Asexual" value="Asexual" />
+                            <Picker.Item label="Prefiero no decir" value="Prefiero no decir" />
+                        </Picker>
+                    </View>
+
+                    {/* Campo para cambiar contraseña */}
+                    <Text style={styles.label}>Nueva Contraseña (dejar vacío para no cambiar):</Text>
+                    <TextInput
+                        style={styles.input}
+                        value={password}
+                        onChangeText={setPassword}
+                        placeholder="Introduce nueva contraseña"
+                        placeholderTextColor="#aaa"
+                        secureTextEntry
+                    />
+
+                    {/* Botón de Guardar */}
+                    <TouchableOpacity
+                        style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+                        onPress={handleSave}
+                        disabled={isSaving}
+                    >
                         {isSaving ? (
                             <ActivityIndicator color="#fff" />
                         ) : (
-                            <Text style={styles.buttonText}>Guardar Cambios</Text>
+                            <Text style={styles.saveButtonText}>Guardar Cambios</Text>
                         )}
                     </TouchableOpacity>
-                </LinearGradient>
-            </View>
-        </View>
-    );
-};
 
+                </ScrollView>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
+    );
+}
+
+// Estilos
 const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#1e1e1e',
+    },
+    flex: {
+        flex: 1,
+    },
+    inner: {
+        padding: 20,
+        paddingBottom: 50,
+    },
+    headerBar: {
+        paddingHorizontal: 20,
+        paddingVertical: 15,
+        backgroundColor: '#2a2a2a',
+        borderBottomWidth: 1,
+        borderBottomColor: '#333',
+        alignItems: 'center',
+    },
+    title: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#fff',
+    },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#0d0d0d',
+        backgroundColor: '#1e1e1e',
     },
     loadingText: {
         marginTop: 10,
-        color: '#fff',
         fontSize: 18,
+        color: '#e14eca',
     },
-    container: { flex: 1, backgroundColor: '#0d0d0d', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0},
-    headerBar: {
-        height: 60, // Ajustada altura
-        backgroundColor: '#1e1e1e',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center', // Centrado
-        paddingHorizontal: 15,
-        elevation: 5, // Sombra Android
-        shadowColor: '#000', // Sombra iOS
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-    },
-    title: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
-    flex: { flex: 1 },
-    inner: { padding: 20 },
-
-    // Estilos para la sección de foto de perfil (una sola)
-    photoUploadContainerSingle: { // Nuevo contenedor para centrar la única foto
-        alignItems: 'center', // Centra horizontalmente
-        marginTop: 5,
-        marginBottom: 20,
-    },
-    imagePickerSingle: { // Nuevo estilo para el área tocable de la única foto
-        width: 150, // Tamaño más grande para una sola foto
-        height: 150,
-        borderRadius: 75, // Para hacerlo circular
-        backgroundColor: '#1e1e1e',
-        alignItems: 'center',
+    centered: {
+        flex: 1,
         justifyContent: 'center',
-        overflow: 'hidden', // Asegura que la imagen se recorte dentro del círculo
-        borderWidth: 2, // Borde
-        borderColor: '#e14eca',
-        position: 'relative', // Para posicionar el botón de eliminar
+        alignItems: 'center',
+        backgroundColor: '#1e1e1e',
+        padding: 20,
     },
-    profileImageLarge: { // Usamos el estilo grande para la imagen dentro
+    errorText: {
+        fontSize: 18,
+        color: '#ff6347',
+        textAlign: 'center',
+    },
+    photoContainer: {
+        width: 150,
+        height: 150,
+        borderRadius: 75,
+        backgroundColor: '#333',
+        justifyContent: 'center',
+        alignItems: 'center',
+        alignSelf: 'center',
+        marginBottom: 20,
+        overflow: 'hidden',
+        borderWidth: 2,
+        borderColor: '#e14eca',
+    },
+    profileImagePlaceholder: {
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    photoPlaceholderText: {
+        color: '#ccc',
+        marginTop: 5,
+    },
+    profileImage: {
         width: '100%',
         height: '100%',
         resizeMode: 'cover',
     },
-    placeholderLarge: { // Nuevo estilo para el placeholder grande
-        width: '100%',
-        height: '100%',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#2a2a2a',
-    },
-    placeholderTextLarge: { // Estilo para el texto dentro del placeholder grande
-        color: '#aaa',
-        fontSize: 16, // Texto más grande
-        marginTop: 8,
-    },
-    removePhotoButtonSingle: { // Nuevo estilo para el botón de eliminar en la única foto
+    cameraIcon: {
         position: 'absolute',
-        top: -5, // Ajusta la posición
-        right: -5, // Ajusta la posición
-        backgroundColor: '#0d0d0d',
-        borderRadius: 14, // Para hacerlo circular
-        padding: 3,
-        zIndex: 1,
+        bottom: 5,
+        right: 5,
+        backgroundColor: '#e14eca',
+        borderRadius: 15,
+        padding: 5,
     },
-
-
-    label: { color: '#fff', fontSize: 14, marginBottom: 6, marginTop: 15 },
-    input: { height: 48, borderRadius: 8, paddingHorizontal: 12, backgroundColor: '#1e1e1e', color: '#fff' },
-    disabledInput: {
-        opacity: 0.6, // Indicar visualmente que está deshabilitado
+    removePhotoButton: {
+        alignSelf: 'center',
+        marginTop: 10,
+        paddingVertical: 5,
+        paddingHorizontal: 10,
+        backgroundColor: '#ff6347',
+        borderRadius: 5,
     },
-    textArea: { height: 100 },
-
-    // Estilos para Pickers (Desplegables) - Ajustados ligeramente
+    removePhotoButtonText: {
+        color: '#fff',
+        fontSize: 14,
+    },
+    label: {
+        fontSize: 16,
+        color: '#fff',
+        marginTop: 15,
+        marginBottom: 5,
+    },
+    input: {
+        backgroundColor: '#333',
+        color: '#fff',
+        borderRadius: 8,
+        paddingHorizontal: 15,
+        paddingVertical: 12,
+        fontSize: 16,
+        borderWidth: 1,
+        borderColor: '#555',
+    },
+    multilineInput: {
+        height: 100,
+    },
     pickerContainer: {
-        flexDirection: 'row',
-        backgroundColor: '#1e1e1e',
-        borderRadius: 8, // Bordes un poco menos redondeados
-        marginTop: 8,
-        alignItems: 'center',
-        width: '100%',
-        paddingLeft: 12, // Ajustado paddingLeft
+        backgroundColor: '#333',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#555',
+        marginBottom: 10,
         overflow: 'hidden',
-        height: 48, // Altura consistente con inputs
-    },
-    pickerIcon: {
-        marginRight: 12, // Ajustado marginRight
     },
     picker: {
-        flex: 1,
-        color: '#fff',
-        ...Platform.select({
-            ios: {},
-            android: {
-                height: 48, // Altura consistente en Android
-            },
-        }),
-    },
-    pickerItem: {
-        color: '#fff',
-        backgroundColor: '#1e1e1e',
-    },
-
-    // Estilos para Botones de Selección (Estudios / Trabajo) - Ajustados ligeramente
-    selectionButtonContainer: {
-        flexDirection: 'row',
+        height: 50,
         width: '100%',
-        marginTop: 8,
-        justifyContent: 'space-around',
-        alignItems: 'center',
-        backgroundColor: '#1e1e1e',
-        borderRadius: 8, // Bordes un poco menos redondeados
-        padding: 4, // Padding interno
-    },
-    selectionButton: {
-        flex: 1,
-        paddingVertical: 12, // Ajustado padding vertical
-        paddingHorizontal: 8, // Ajustado padding horizontal
-        borderRadius: 6, // Bordes un poco más redondeados que el contenedor
-        alignItems: 'center',
-        backgroundColor: '#2a2a2a',
-        marginHorizontal: 3,
-    },
-    selectionButtonSelected: {
-        backgroundColor: '#e14eca',
-    },
-    selectionButtonText: {
-        color: '#aaa',
-        fontWeight: 'bold',
-        fontSize: 14, // Ajustado tamaño de fuente
-    },
-    selectionButtonTextSelected: {
         color: '#fff',
     },
-    clearSelectionButton: {
-        padding: 6, // Área de toque
+    saveButton: {
+        backgroundColor: '#e14eca',
+        borderRadius: 8,
+        paddingVertical: 15,
+        alignItems: 'center',
+        marginTop: 30,
     },
-
-
-    footer: { padding: 20, backgroundColor: '#0d0d0d', borderTopWidth: 1, borderTopColor: '#2d2d2d' }, // Borde superior
-    buttonGradient: { borderRadius: 10,  overflow: 'hidden', },
-    buttonInner: { paddingVertical: 14, alignItems: 'center' },
-    buttonText: { color: '#fff', fontWeight: 'bold' },
+    saveButtonDisabled: {
+        backgroundColor: '#555',
+    },
+    saveButtonText: {
+        color: '#fff',
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
 });

@@ -1,17 +1,13 @@
+// app/(tabs)/_layout.tsx (Layout del grupo de pestañas)
+// Este archivo define el navegador de pestañas para las rutas dentro de la carpeta (tabs).
 import { Tabs } from 'expo-router';
 import React from 'react';
-// Importamos el componente TabBarIcon desde nuestra carpeta local de componentes.
-// La ruta '@/' asume que tienes configurado un alias en tu proyecto (por ejemplo, en tsconfig.json o babel.config.js)
-// que apunta a la raíz de tu proyecto o a la carpeta `src`.
 import { TabBarIcon } from '@/components/navigation/TabBarIcon';
-// Importamos la configuración de colores de tu proyecto.
 import { Colors } from '@/constants/Colors';
-// Hook para detectar el esquema de color del sistema (claro u oscuro).
 import { useColorScheme } from '@/hooks/useColorScheme';
 
 // Este componente define la estructura de pestañas de tu aplicación.
 export default function TabLayout() {
-    // Obtenemos el esquema de color actual.
     const colorScheme = useColorScheme();
 
     return (
@@ -33,14 +29,11 @@ export default function TabLayout() {
                 tabBarInactiveTintColor: '#aaa',
             }}
         >
-            {/* Definición de cada pestaña */}
-
             {/* Pestaña de Ofertas */}
             <Tabs.Screen
-                // 'offers' debe coincidir con el nombre del archivo de la pantalla (ej: app/(tabs)/offers.tsx).
-                name="offers"
+                name="offers" // Corresponde al archivo offers.tsx dentro de (tabs)
                 options={{
-                    title: 'Ofertas', // Título que se muestra debajo del icono en la barra de pestañas.
+                    title: 'Ofertas', // Título que se muestra en la pestaña
                     // Función para renderizar el icono de la pestaña.
                     tabBarIcon: ({ color, focused }) => (
                         // Usamos tu componente TabBarIcon, pasándole el nombre del icono y el color.
@@ -50,10 +43,10 @@ export default function TabLayout() {
                 }}
             />
 
-            {/* Pestaña de Mapa (asumiendo que 'index' es tu pantalla principal o mapa) */}
+            {/* Pestaña de Mapa */}
+            {/* Corresponde al archivo map.tsx dentro de (tabs) */}
             <Tabs.Screen
-                // 'index' típicamente se refiere al archivo index.tsx en el directorio (ej: app/(tabs)/index.tsx).
-                name="index"
+                name="map" // Corresponde al archivo map.tsx
                 options={{
                     title: 'Mapa', // Título para la pestaña del mapa.
                     tabBarIcon: ({ color, focused }) => (
@@ -63,9 +56,9 @@ export default function TabLayout() {
             />
 
             {/* Pestaña de Perfil */}
+            {/* Corresponde al archivo profile.tsx dentro de (tabs) */}
             <Tabs.Screen
-                // 'profile' debe coincidir con el nombre del archivo (ej: app/(tabs)/profile.tsx).
-                name="profile"
+                name="profile" // Corresponde al archivo profile.tsx
                 options={{
                     title: 'Perfil', // Título para la pestaña de perfil.
                     tabBarIcon: ({ color, focused }) => (
@@ -75,19 +68,18 @@ export default function TabLayout() {
             />
 
             {/*
-                Manejo de la pantalla not-found.tsx:
-                Si tienes un archivo +not-found.tsx dentro de la carpeta (tabs),
-                esta configuración asegura que no aparezca como una pestaña visible
-                y no tenga un botón en la barra de pestañas.
-                Hemos eliminado 'href: null' ya que no es compatible con 'tabBarButton'.
+                La pantalla +not-found.tsx si está dentro de (tabs)
+                NO debe definirse aquí si ya está definida en el layout de la raíz.
+                Si tu +not-found.tsx está en app/+not-found.tsx, esta definición debe estar comentada o eliminada.
             */}
+            {/*
             <Tabs.Screen
-                name="+not-found" // Nombre del archivo: +not-found.tsx
+                name="+not-found"
                 options={{
-                    // Eliminamos href: null aquí
-                    tabBarButton: () => null, // Oculta completamente el botón/icono de esta pestaña en la barra.
+                    tabBarButton: () => null, // Oculta el botón de esta pestaña
                 }}
             />
+            */}
 
         </Tabs>
     );
