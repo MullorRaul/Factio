@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+// Importamos Picker ya que se usará para Género y Orientación Sexual
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 
@@ -33,12 +34,12 @@ const AUTH_TOKEN_KEY = 'userToken';
 interface UserProfile {
     cod_usuario: number;
     email: string | null;
-    nombre: string | null; // Mapeado a 'Sobre mí' en frontend
+    nombre: string | null; // Mapeado a 'Sobre mí' en frontend (ahora eliminado de la UI)
     username: string | null;
     edad: number | null | undefined;
-    genero: string | null;
+    genero: string | null; // Editable con Picker
     estudios_trabajo: string | null;
-    orientacion_sexual: string | null;
+    orientacion_sexual: string | null; // Editable con Picker
     url_fotoperfil: string | null;
     foto_url_1: string | null;
     foto_url_2: string | null;
@@ -54,16 +55,21 @@ export default function ProfileScreen() {
     const [email, setEmail] = useState<string>('');
     const [username, setUsername] = useState<string>('');
     const [edad, setEdad] = useState<string>('');
+    // Estados para género y orientacionSexual (editables)
     const [genero, setGenero] = useState<string>('');
-    const [estudiosTrabajo, setEstudiosTrabajo] = useState<string>('');
+    const [estudiosTrabajo, setEstudiosTrabajo] = useState<string>(''); // Este sigue siendo editable
     const [orientacionSexual, setOrientacionSexual] = useState<string>('');
-    const [description, setDescription] = useState<string>(''); // Mapeado a 'nombre' en DB
+    // Eliminamos el estado para 'description' (Sobre mí) - eliminado completamente
+    // const [description, setDescription] = useState<string>('');
 
 
     const [password, setPassword] = useState<string>('');
 
     const [profilePhotoUri, setProfilePhotoUri] = useState<string | null>(null);
     const [newProfilePhotoFile, setNewProfilePhotoFile] = useState<any>(null);
+
+    // Eliminamos el estado para mostrar el valor no editable de "Sobre mí"
+    // const [displayNombre, setDisplayNombre] = useState<string>(''); // Para mostrar 'Sobre mí'
 
 
     const [isLoadingProfile, setIsLoadingProfile] = useState(true);
@@ -111,7 +117,7 @@ export default function ProfileScreen() {
                 if (!response.ok) {
                     console.error('Error fetching profile:', responseData.error || response.statusText);
                     if (response.status === 401) {
-                        Alert.alert('Sesión expirada', 'Tu sesión ha expirado. Por favor, inicia sesión de nuevo.');
+                        Alert.alert('Sesión expirada', 'Tu sesión ha expirada. Por favor, inicia sesión de nuevo.');
                         await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
                         router.replace('/(auth)/login');
                     } else {
@@ -129,10 +135,14 @@ export default function ProfileScreen() {
                     setEmail(profile.email || '');
                     setUsername(profile.username || '');
                     setEdad(profile.edad !== null && profile.edad !== undefined ? String(profile.edad) : '');
-                    setGenero(profile.genero || '');
-                    setEstudiosTrabajo(profile.estudios_trabajo || '');
-                    setOrientacionSexual(profile.orientacion_sexual || '');
-                    setDescription(profile.nombre || '');
+                    // Seteamos estados editables para género y orientacionSexual
+                    setGenero(profile.genero || ''); // Usar '' para la opción "Selecciona..."
+                    setEstudiosTrabajo(profile.estudios_trabajo || ''); // Este sigue siendo editable
+                    setOrientacionSexual(profile.orientacion_sexual || ''); // Usar '' para la opción "Selecciona..."
+                    // Ya no seteamos estado editable ni de visualización para description/nombre
+                    // setDescription(profile.nombre || '');
+                    // setDisplayNombre(profile.nombre || 'No especificado');
+
 
                     setProfilePhotoUri(profile.url_fotoperfil || null);
 
@@ -149,7 +159,6 @@ export default function ProfileScreen() {
                 setError('Error de conexión al cargar el perfil. Asegúrate de que el backend está corriendo y la URL es correcta.');
                 Alert.alert('Error de conexión', 'No se pudo cargar el perfil.');
             } finally {
-                console.log('DEBUG: fetchProfile finally block executed.');
                 setIsLoadingProfile(false);
             }
         };
@@ -234,6 +243,7 @@ export default function ProfileScreen() {
         const formData = new FormData();
         let hasChanges = false;
 
+        // Campos editables
         const originalEmail = originalProfileData?.email || '';
         const currentEmail = email.trim();
         if (originalEmail !== currentEmail) {
@@ -248,12 +258,13 @@ export default function ProfileScreen() {
             hasChanges = true;
         }
 
-        const originalDescription = originalProfileData?.nombre || '';
-        const currentDescription = description.trim();
-        if (originalDescription !== currentDescription) {
-            formData.append('nombre', currentDescription);
-            hasChanges = true;
-        }
+        // Campo "Sobre mí" (nombre en DB) - ELIMINADO COMPLETAMENTE, NO SE ENVÍA EN FORMDATA
+        // const originalDescription = originalProfileData?.nombre || '';
+        // const currentDescription = description.trim();
+        // if (originalDescription !== currentDescription) {
+        //     formData.append('nombre', currentDescription);
+        //     hasChanges = true;
+        // }
 
         const currentPassword = password.trim();
         if (currentPassword !== '') {
@@ -275,17 +286,25 @@ export default function ProfileScreen() {
                     return;
                 }
             } else {
-                formData.append('edad', '');
+                formData.append('edad', ''); // Enviar vacío para poner a NULL
                 hasChanges = true;
             }
         }
 
+        // Campo Género (Editable con Picker)
         const originalGenero = originalProfileData?.genero || '';
-        const currentGenero = genero.trim();
+        const currentGenero = genero; // No trim aquí si el Picker usa '' para "Selecciona..."
         if (originalGenero !== currentGenero) {
-            formData.append('genero', currentGenero);
+            // Solo añadir al FormData si el valor no es la cadena vacía ''
+            if (currentGenero !== '') {
+                formData.append('genero', currentGenero);
+            } else {
+                // Si el valor es '', enviar explícitamente una cadena vacía o null para que el backend lo maneje
+                formData.append('genero', ''); // Backend debería interpretar '' como NULL
+            }
             hasChanges = true;
         } else if (currentGenero === '' && originalProfileData?.genero !== null) {
+            // Si el valor actual es '' pero el original NO era NULL, significa que se cambió a ''
             formData.append('genero', '');
             hasChanges = true;
         }
@@ -302,15 +321,24 @@ export default function ProfileScreen() {
         }
 
 
+        // Campo Orientación Sexual (Editable con Picker)
         const originalOrientacionSexual = originalProfileData?.orientacion_sexual || '';
-        const currentOrientacionSexual = orientacionSexual.trim();
+        const currentOrientacionSexual = orientacionSexual; // No trim aquí si el Picker usa '' para "Selecciona..."
         if (originalOrientacionSexual !== currentOrientacionSexual) {
-            formData.append('orientacion_sexual', currentOrientacionSexual);
+            // Solo añadir al FormData si el valor no es la cadena vacía ''
+            if (currentOrientacionSexual !== '') {
+                formData.append('orientacion_sexual', currentOrientacionSexual);
+            } else {
+                // Si el valor es '', enviar explícitamente una cadena vacía o null para que el backend lo maneje
+                formData.append('orientacion_sexual', ''); // Backend debería interpretar '' como NULL
+            }
             hasChanges = true;
         } else if (currentOrientacionSexual === '' && originalProfileData?.orientacion_sexual !== null) {
+            // Si el valor actual es '' pero el original NO era NULL, significa que se cambió a ''
             formData.append('orientacion_sexual', '');
             hasChanges = true;
         }
+
 
         // Manejo de subida de la nueva foto de perfil
         if (newProfilePhotoFile) {
@@ -363,6 +391,12 @@ export default function ProfileScreen() {
 
             if (data.profile) {
                 setOriginalProfileData(data.profile);
+                // Actualizar los estados editables para reflejar los datos guardados
+                setGenero(data.profile.genero || '');
+                setEstudiosTrabajo(data.profile.estudios_trabajo || '');
+                setOrientacionSexual(data.profile.orientacion_sexual || '');
+                // Ya no actualizamos displayNombre ya que el campo fue eliminado
+                // setDisplayNombre(data.profile.nombre || 'No especificado');
             }
 
             setPassword('');
@@ -454,18 +488,12 @@ export default function ProfileScreen() {
                         autoCapitalize="none"
                     />
 
-                    {/* Campo "Sobre mí" */}
-                    <Text style={styles.label}>Sobre mí:</Text>
-                    <TextInput
-                        style={[styles.input, styles.multilineInput]}
-                        value={description}
-                        onChangeText={setDescription}
-                        placeholder="Cuéntanos algo sobre ti"
-                        placeholderTextColor="#aaa"
-                        multiline={true}
-                        numberOfLines={4}
-                        textAlignVertical="top"
-                    />
+                    {/* Campo "Sobre mí" (Eliminado completamente de la UI) */}
+                    {/* <Text style={styles.label}>Sobre mí:</Text> */}
+                    {/* <View style={styles.displayValueContainer}> */}
+                    {/* <Text style={styles.displayValueText}>{displayNombre}</Text> */}
+                    {/* </View> */}
+
 
                     <Text style={styles.label}>Edad:</Text>
                     <TextInput
@@ -477,22 +505,24 @@ export default function ProfileScreen() {
                         keyboardType="number-pad"
                     />
 
-                    {/* Campo Género (Picker) */}
+                    {/* Campo Género (Editable con Picker) - Opciones sincronizadas con signup */}
                     <Text style={styles.label}>Género:</Text>
                     <View style={styles.pickerContainer}>
                         <Picker
-                            selectedValue={genero}
-                            onValueChange={(itemValue, itemIndex) => setGenero(itemValue)}
+                            selectedValue={genero} // Usar estado 'genero'
+                            onValueChange={(itemValue: string) => setGenero(itemValue)} // Actualizar estado 'genero'
                             style={styles.picker}
-                            dropdownIconColor="#fff"
+                            dropdownIconColor="#fff" // Asegura que el ícono sea visible
                         >
+                            {/* Opción por defecto con value="" */}
                             <Picker.Item label="Selecciona tu género" value="" enabled={false} style={{ color: '#aaa' }} />
-                            <Picker.Item label="Masculino" value="Masculino" />
-                            <Picker.Item label="Femenino" value="Femenino" />
-                            <Picker.Item label="No binario" value="No binario" />
-                            <Picker.Item label="Prefiero no decir" value="Prefiero no decir" />
+                            <Picker.Item label="Masculino" value="Masculino" style={{ color: '#fff' }} />
+                            <Picker.Item label="Femenino" value="Femenino" style={{ color: '#fff' }} />
+                            <Picker.Item label="Otro" value="Otro" style={{ color: '#fff' }} />
+                            {/* Eliminadas opciones que no están en signup */}
                         </Picker>
                     </View>
+
 
                     {/* Campo Estudios/Trabajo */}
                     <Text style={styles.label}>Estudios/Trabajo:</Text>
@@ -504,24 +534,25 @@ export default function ProfileScreen() {
                         placeholderTextColor="#aaa"
                     />
 
-                    {/* Campo Orientación Sexual (Picker) */}
+                    {/* Campo Orientación Sexual (Editable con Picker) - Opciones sincronizadas con signup */}
                     <Text style={styles.label}>Orientación Sexual:</Text>
                     <View style={styles.pickerContainer}>
                         <Picker
-                            selectedValue={orientacionSexual}
-                            onValueChange={(itemValue, itemIndex) => setOrientacionSexual(itemValue)}
+                            selectedValue={orientacionSexual} // Usar estado 'orientacionSexual'
+                            onValueChange={(itemValue: string) => setOrientacionSexual(itemValue)} // Actualizar estado 'orientacionSexual'
                             style={styles.picker}
-                            dropdownIconColor="#fff"
+                            dropdownIconColor="#fff" // Asegura que el ícono sea visible
                         >
+                            {/* Opción por defecto con value="" */}
                             <Picker.Item label="Selecciona tu orientación" value="" enabled={false} style={{ color: '#aaa' }} />
-                            <Picker.Item label="Heterosexual" value="Heterosexual" />
-                            <Picker.Item label="Homosexual" value="Homosexual" />
-                            <Picker.Item label="Bisexual" value="Bisexual" />
-                            <Picker.Item label="Pansexual" value="Pansexual" />
-                            <Picker.Item label="Asexual" value="Asexual" />
-                            <Picker.Item label="Prefiero no decir" value="Prefiero no decir" />
+                            <Picker.Item label="Heterosexual" value="Heterosexual" style={{ color: '#fff' }} />
+                            <Picker.Item label="Bisexual" value="Bisexual" style={{ color: '#fff' }} />
+                            <Picker.Item label="Homosexual" value="Homosexual" style={{ color: '#fff' }} />
+                            <Picker.Item label="Otro" value="Otro" style={{ color: '#fff' }} />
+                            {/* Eliminadas opciones que no están en signup */}
                         </Picker>
                     </View>
+
 
                     {/* Campo para cambiar contraseña */}
                     <Text style={styles.label}>Nueva Contraseña (dejar vacío para no cambiar):</Text>
@@ -667,19 +698,47 @@ const styles = StyleSheet.create({
     multilineInput: {
         height: 100,
     },
+    // Estilos para Pickers (Desplegables) - Reutilizamos los estilos del signup
     pickerContainer: {
-        backgroundColor: '#333',
+        flexDirection: 'row',
+        backgroundColor: '#333', // Fondo oscuro
         borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#555',
-        marginBottom: 10,
+        marginTop: 8,
+        alignItems: 'center',
+        width: '100%',
+        paddingLeft: 10, // Espacio para el ícono si lo añades
         overflow: 'hidden',
+        height: 50, // Altura consistente
+        borderWidth: 1, // Borde para que coincida con los inputs
+        borderColor: '#555', // Color del borde
     },
     picker: {
-        height: 50,
-        width: '100%',
-        color: '#fff',
+        flex: 1,
+        color: '#fff', // Color del texto del picker
+        ...Platform.select({
+            ios: {
+                // Estilos específicos de iOS si es necesario
+            },
+            android: {
+                // Estilos específicos de Android si es necesario
+                height: 50, // Asegura que la altura sea consistente en Android
+            },
+        }),
     },
+    // Estilos para mostrar valores no editables (solo para "Sobre mí") - Eliminados ya que el campo fue quitado
+    // displayValueContainer: {
+    //     backgroundColor: '#333',
+    //     borderRadius: 8,
+    //     paddingHorizontal: 15,
+    //     paddingVertical: 12,
+    //     borderWidth: 1,
+    //     borderColor: '#555',
+    //     justifyContent: 'center', // Centrar texto verticalmente si es necesario
+    // },
+    // displayValueText: {
+    //     fontSize: 16,
+    //     color: '#fff', // Color del texto mostrado
+    // },
     saveButton: {
         backgroundColor: '#e14eca',
         borderRadius: 8,
