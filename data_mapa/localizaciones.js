@@ -39,7 +39,7 @@ export default [
         latitude: 38.6953,
         longitude: -0.4827,
         pinColor: '#8A2BE2',
-        image: require('../assets/images/img.png'),
+        image: require('../assets/images/gavana.png'),
         weight: 40,
         mapUrl: 'https://maps.app.goo.gl/g8cbx8Wqa9UpF9cd9'
     },
