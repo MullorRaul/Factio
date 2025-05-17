@@ -61,6 +61,26 @@ const MOCK_REELS: ReelEvent[] = [
             { age: 24, count: 15 }, { age: 26, count: 8 }, { age: 28, count: 1 },
         ],
     },
+    // --- AÑADIDOS: Nuevos Reels ---
+    {
+        id: '4', image: require('../../assets/images/cafe.jpg'), name: 'Cafetería Uni', date: 'Cada Día', // Fecha inventada
+        aforo: 80, occupied: 70, genderRatio: { male: 45, female: 55 }, // Datos inventados
+        musicStyle: 'Chill / Ambiente', dailyOffer: 'Café + Tostada 2€', theme: 'Estudio Tranquilo', // Datos inventados
+        ageDistribution: [ // Datos inventados
+            { age: 18, count: 10 }, { age: 19, count: 20 }, { age: 20, count: 25 },
+            { age: 21, count: 10 }, { age: 22, count: 5 },
+        ],
+    },
+    {
+        id: '5', image: require('../../assets/images/gavana.jpg'), name: 'Gavana', date: 'May 25, 2025', // Fecha inventada
+        aforo: 300, occupied: 180, genderRatio: { male: 70, female: 30 }, // Datos inventados
+        musicStyle: 'Reggaeton / Comercial', dailyOffer: 'Chupitos 1€', theme: 'Fiesta Latina', // Datos inventados
+        ageDistribution: [ // Datos inventados
+            { age: 18, count: 20 }, { age: 19, count: 30 }, { age: 20, count: 40 },
+            { age: 21, count: 45 }, { age: 22, count: 30 }, { age: 23, count: 15 },
+        ],
+    },
+    // --- FIN AÑADIDOS ---
 ];
 
 export default function OffersScreen() {
@@ -97,11 +117,18 @@ export default function OffersScreen() {
     const renderReel = ({ item }: { item: ReelEvent }) => {
         const aforoPercent = (item.occupied / item.aforo) * 100;
         const totalAge = item.ageDistribution.reduce((s, b) => s + b.count, 0);
+        // Verifica que totalAge no sea cero para evitar división por cero
+        const avgAge = totalAge === 0 ? 0 : item.ageDistribution.reduce((sum, b) => sum + b.age * b.count, 0) / totalAge;
+
+        // Encontrar min y max edad solo si hay datos de edad
         const ages = item.ageDistribution.map(b => b.age);
-        const minAge = Math.min(...ages);
-        const maxAge = Math.max(...ages);
-        const avgAge = item.ageDistribution.reduce((sum, b) => sum + b.age * b.count, 0) / totalAge;
-        const needlePos = ((avgAge - minAge) / (maxAge - minAge)) * 100;
+        const minAge = ages.length > 0 ? Math.min(...ages) : 0;
+        const maxAge = ages.length > 0 ? Math.max(...ages) : 0;
+
+        // Calcula la posición de la aguja solo si hay un rango de edad válido
+        const ageRange = maxAge - minAge;
+        const needlePos = ageRange > 0 ? ((avgAge - minAge) / ageRange) * 100 : 0;
+
 
         return (
             <View style={styles.cardContainer}>
@@ -132,17 +159,33 @@ export default function OffersScreen() {
                         </View>
 
                         {/* Edades */}
-                        <Text style={styles.detail}>Edades: {minAge} - {maxAge} años</Text>
+                        {ages.length > 0 && (
+                            <Text style={styles.detail}>Edades: {minAge} - {maxAge} años</Text>
+                        )}
                         <View style={styles.ageBarBackground}>
-                            {item.ageDistribution.map(b => {
-                                const pct = (b.count / totalAge) * 100;
-                                const opacity = b.count / Math.max(...item.ageDistribution.map(x => x.count));
-                                return <View key={b.age} style={[styles.ageBarSegment, { width: `${pct}%`, backgroundColor: `rgba(222,78,174,${opacity})` }]} />;
-                            })}
-                            {/* Needle indicator */}
-                            <View style={[styles.ageNeedle, { left: `${needlePos}%` }]} />
+                            {/* Renderiza segmentos de edad solo si hay datos */}
+                            {item.ageDistribution.length > 0 ? (
+                                item.ageDistribution.map(b => {
+                                    const pct = (b.count / totalAge) * 100;
+                                    // Evita opacity NaN si solo hay un segmento con count 0
+                                    const maxCount = Math.max(...item.ageDistribution.map(x => x.count));
+                                    const opacity = maxCount > 0 ? b.count / maxCount : 0;
+
+                                    return <View key={b.age} style={[styles.ageBarSegment, { width: `${pct}%`, backgroundColor: `rgba(222,78,174,${opacity})` }]} />;
+                                })
+                            ) : (
+                                // Opcional: Mostrar un indicador si no hay datos de edad
+                                <Text style={{ color: '#888', fontSize: 10, alignSelf: 'center' }}>No hay datos de edad disponibles</Text>
+                            )}
+                            {/* Needle indicator - solo si hay rango de edad */}
+                            {ageRange > 0 && (
+                                <View style={[styles.ageNeedle, { left: `${needlePos}%` }]} />
+                            )}
                         </View>
-                        <Text style={styles.detail}>Edad media: {avgAge.toFixed(1)} años</Text>
+                        {totalAge > 0 && ( // Mostrar edad media solo si hay datos de edad
+                            <Text style={styles.detail}>Edad media: {avgAge.toFixed(1)} años</Text>
+                        )}
+
 
                         {/* Otros detalles */}
                         <Text style={styles.detail}>🎶 {item.musicStyle}</Text>
@@ -151,21 +194,28 @@ export default function OffersScreen() {
 
                         {/* Botones */}
                         <View style={styles.actionRow}>
-                            <TouchableOpacity style={styles.mapButton} onPress={()=>{}}>
+                            <TouchableOpacity style={styles.mapButton} onPress={()=>{
+                                // Lógica para ir al mapa, quizás centrado en este punto
+                                // router.push({
+                                //      pathname: '/mapa', // Asegúrate de que esta sea la ruta correcta a tu mapa
+                                //      params: { pointId: item.id } // Pasa el ID para centrar el mapa
+                                //    });
+                            }}>
                                 <MaterialCommunityIcons name="map-marker-radius" size={20} color="#aaa" />
                                 <Text style={styles.buttonText}>Cómo llegar</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.factioButton} onPress={()=>router.push({
-                                     pathname: '/match/[eventId]',
-                                     params: { eventId: item.id }
-                                   })}>
+                                pathname: '/match/[eventId]',
+                                params: { eventId: item.id }
+                            })}>
                                 <Text style={styles.buttonText}>Factio 🔥</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
 
                     {/* Timer abajo */}
-                    <Animated.View style={[styles.timerContainer, { bottom: TAB_BAR_HEIGHT, width: timer }]} />
+                    {/* Ajustar bottom para que no quede debajo de la tab bar si no quieres */}
+                    <Animated.View style={[styles.timerContainer, { bottom: TAB_BAR_HEIGHT > 0 ? TAB_BAR_HEIGHT : 0, width: timer }]} />
                 </ImageBackground>
             </View>
         );
@@ -204,9 +254,9 @@ const styles = StyleSheet.create({
     barFillMale: { height: '100%', backgroundColor: '#4ea8de', position: 'absolute', left: 0 },
     barFillFemale: { height: '100%', backgroundColor: '#de4eae', position: 'absolute', right: 0 },
     detail: { color: '#ccc', fontSize: 13, marginTop: 6 },
-    ageBarBackground: { flexDirection: 'row', width: '100%', height: 6, backgroundColor: '#222', borderRadius: 3, overflow: 'hidden', marginTop: 4 },
+    ageBarBackground: { flexDirection: 'row', width: '100%', height: 6, backgroundColor: '#222', borderRadius: 3, overflow: 'hidden', marginTop: 4, position: 'relative' }, // Added position relative
     ageBarSegment: { height: '100%' },
-    ageNeedle: { position: 'absolute', top: -4, width: 2, height: 14, backgroundColor: '#fff' },
+    ageNeedle: { position: 'absolute', top: -4, width: 2, height: 14, backgroundColor: '#fff', zIndex: 1 }, // Added zIndex
     actionRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 },
     mapButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#2a2a2a', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20 },
     factioButton: { backgroundColor: '#f4524d', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },

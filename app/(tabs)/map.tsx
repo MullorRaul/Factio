@@ -24,16 +24,40 @@ import puntosData from '../../data_mapa/localizaciones';
 import mapaOscuro from '../../data_mapa/estilos_mapa/mapaOscuro';
 import { Punto } from '../../data_mapa/types';
 
+import { useNavigation } from '@react-navigation/native';
+// import { StackNavigationProp } from '@react-navigation/stack';
+
+/*
+// Ejemplo de cómo podrías tipar la navegación si usas TypeScript y Stack Navigator
+// Reemplaza 'RootStackParamList' con el nombre de tu lista de parámetros de stack
+type RootStackParamList = {
+  '/eventos_gaudi': undefined; // O define parámetros si los necesitas
+  '/eventos_delirium': undefined;
+  '/eventos_don_vito': undefined;
+  // ... otras rutas de tu aplicación
+  '/mapa': undefined; // Asegúrate de incluir la ruta de esta pantalla también
+};
+
+// Tipo para la prop de navegación de esta pantalla
+type MapScreenNavigationProp = StackNavigationProp<RootStackParamList, '/mapa'>;
+*/
+
 export default function PantallaMapa() {
     const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
     const [region, setRegion] = useState<Region | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedPunto, setSelectedPunto] = useState<Punto | null>(null);
     const [heatmapRadius, setHeatmapRadius] = useState(75);
+    // Corregido el valor inicial de mapRef
     const mapRef = useRef<MapView | null>(null);
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
     const puntos: Punto[] = puntosData;
+
+    // Obtener la instancia de navegación
+    // Si usas TypeScript, puedes usar: useNavigation<MapScreenNavigationProp>();
+    const navigation = useNavigation();
+
 
     useEffect(() => {
         (async () => {
@@ -59,6 +83,7 @@ export default function PantallaMapa() {
         setLocation(ubicacion.coords);
         const nuevaRegion: Region = {
             latitude: ubicacion.coords.latitude,
+            // Corregido: usar ubicacion.coords.longitude
             longitude: ubicacion.coords.longitude,
             latitudeDelta: 0.05,
             longitudeDelta: 0.05,
@@ -89,11 +114,31 @@ export default function PantallaMapa() {
         });
     };
 
+    // Función para manejar la navegación a la página de eventos
+    const handleEventsPress = () => {
+        if (selectedPunto?.eventPageName) {
+            // Cierra el modal antes de navegar
+            closeModal();
+            // Navega usando la ruta definida en los datos (e.g., '/eventos_gaudi')
+            // Si usas TypeScript y el tipado de rutas, quizás no necesites 'as any'
+            // @ts-ignore
+            navigation.navigate(selectedPunto.eventPageName as any);
+        } else {
+            console.warn('No se ha especificado una página de eventos para este punto.');
+            // Cierra el modal incluso si no hay página de eventos
+            closeModal();
+        }
+    };
+
     const openInGoogleMaps = () => {
         if (selectedPunto?.mapUrl) {
+            // Cierra el modal antes de abrir Google Maps
+            closeModal();
             Linking.openURL(selectedPunto.mapUrl).catch(err => console.error('Error al abrir Google Maps', err));
         } else {
             console.warn('No hay URL para abrir en Google Maps');
+            // Cierra el modal
+            closeModal();
         }
     };
 
@@ -162,9 +207,14 @@ export default function PantallaMapa() {
                                         />
                                     )}
                                     <View style={styles.modalButtonsContainer}>
-                                        <TouchableOpacity style={styles.modalCloseButton} onPress={closeModal}>
-                                            <Text style={styles.modalCloseText}>Más Info</Text>
-                                        </TouchableOpacity>
+                                        {/* Botón "Eventos": solo se muestra si hay eventPageName */}
+                                        {selectedPunto.eventPageName && (
+                                            <TouchableOpacity style={styles.modalCloseButton} onPress={handleEventsPress}>
+                                                <Text style={styles.modalCloseText}>Eventos</Text>
+                                            </TouchableOpacity>
+                                        )}
+
+                                        {/* Botón "Ir Ahora" */}
                                         <TouchableOpacity style={styles.modalGoogleMapsButton} onPress={openInGoogleMaps}>
                                             <View style={styles.iconTextContainer}>
                                                 <Text style={[styles.modalGoogleMapsText, { fontStyle: 'italic' }]}>Ir Ahora</Text>
@@ -217,12 +267,11 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.5)',
     },
     modalContainer: {
-
         backgroundColor: 'white',
         padding: 20,
         borderRadius: 10,
         width: '80%',
-        height: '50%',
+        maxHeight: '80%',
         alignItems: 'center',
     },
     modalTitle: {
@@ -237,15 +286,18 @@ const styles = StyleSheet.create({
     },
     modalImage: {
         width: '100%',
-        height: '75%',
+        height: Dimensions.get('window').height * 0.25,
         borderRadius: 8,
         resizeMode: 'cover',
         marginBottom: 10,
     },
     modalButtonsContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         width: '100%',
+        marginTop: 'auto',
+        paddingTop: 10,
+        justifyContent: 'space-around',
+        alignItems: 'center',
     },
     modalCloseButton: {
         backgroundColor: '#9e6fca',
@@ -253,6 +305,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: 15,
         borderRadius: 5,
         justifyContent: "center",
+        alignItems: 'center',
+        flex: 1,
+        marginHorizontal: 5,
     },
     modalCloseText: {
         color: 'white',
@@ -265,6 +320,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: 15,
         borderRadius: 5,
         justifyContent: "center",
+        alignItems: 'center',
+        flex: 1,
+        marginHorizontal: 5,
     },
     modalGoogleMapsText: {
         color: 'white',
@@ -274,7 +332,7 @@ const styles = StyleSheet.create({
     iconTextContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'flex-start',
+        justifyContent: 'center',
         gap: 5,
     },
 });
