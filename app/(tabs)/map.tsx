@@ -90,9 +90,10 @@ export default function PantallaMapa() {
     };
 
     const openInGoogleMaps = () => {
-        if (selectedPunto) {
-            const url = `https://www.google.com/maps?q=${selectedPunto.latitude},${selectedPunto.longitude}`;
-            Linking.openURL(url).catch(err => console.error('Error al abrir Google Maps', err));
+        if (selectedPunto?.mapUrl) {
+            Linking.openURL(selectedPunto.mapUrl).catch(err => console.error('Error al abrir Google Maps', err));
+        } else {
+            console.warn('No hay URL para abrir en Google Maps');
         }
     };
 
@@ -110,6 +111,7 @@ export default function PantallaMapa() {
                     userLocationAnnotationTitle="Mi ubicación"
                     userLocationCalloutEnabled
                     tintColor="#8A2BE2"
+                    onPanDrag={() => {}}
                 >
                     <Heatmap
                         points={puntos.map(p => ({
@@ -117,13 +119,13 @@ export default function PantallaMapa() {
                             longitude: p.longitude,
                             weight: p.weight || 1,
                         }))}
-                        radius={40}
+                        radius={50}
                         opacity={0.7}
                         gradient={{
                             colors: [
-                                '#00FFFF', '#40E0D0', '#1E90FF', '#4169E1',
                                 '#6A5ACD', '#7B68EE', '#8A2BE2', '#9400D3',
-                                '#6A0DAD', '#4B0082'
+                                '#6A0DAD', '#5A0E9C', '#53108F', '#4C0F88',
+                                '#480E83', '#4B0082'
                             ],
                             startPoints: [0.01, 0.1, 0.2, 0.3, 0.45, 0.55, 0.65, 0.75, 0.85, 1.0],
                             colorMapSize: 160,
@@ -215,10 +217,12 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.5)',
     },
     modalContainer: {
+
         backgroundColor: 'white',
         padding: 20,
         borderRadius: 10,
-        width: 300,
+        width: '80%',
+        height: '50%',
         alignItems: 'center',
     },
     modalTitle: {
@@ -233,7 +237,7 @@ const styles = StyleSheet.create({
     },
     modalImage: {
         width: '100%',
-        height: 120,
+        height: '75%',
         borderRadius: 8,
         resizeMode: 'cover',
         marginBottom: 10,

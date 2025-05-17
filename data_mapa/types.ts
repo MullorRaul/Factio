@@ -7,4 +7,6 @@ export interface Punto {
     image: any;
     weight?: number;
     pinColor?: string;
+    mapUrl?: string|undefined;
+
 }
