@@ -23,10 +23,7 @@ const AUTO_SCROLL_DURATION = 13000;
 const API_BASE_URL = 'http://192.168.1.142:3001';
 const AUTH_TOKEN_KEY = 'userToken';
 
-// --- Importa tus 5 imágenes locales aquí ---
-// !! NECESITAS VERIFICAR Y CORREGIR ESTAS RUTAS RELATIVAS SEGÚN TU ESTRUCTURA DE CARPETAS REAL !!
-// La ruta '../../../assets/images/' asume que 'assets' está en la raíz del proyecto
-// (dos niveles '..' para salir de '(tabs)', uno '..' para salir de 'app', y luego bajando por 'assets/images/')
+
 const CAFE_IMAGE = require('../../assets/images/cafe.jpg'); // Verifica esta ruta
 const DELIRIUM_IMAGE = require('../../assets/images/delirium.jpg'); // Verifica esta ruta
 const DON_VITO_IMAGE = require('../../assets/images/don_vito.jpeg'); // Verifica esta ruta

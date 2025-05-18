@@ -69,6 +69,7 @@ export default function LoginScreen() {
     };
 
     // @ts-ignore
+    // @ts-ignore
     return (
         <View style={styles.container}>
             <StatusBar style="light" />
