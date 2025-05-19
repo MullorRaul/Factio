@@ -1,14 +1,31 @@
 // app/(tabs)/_layout.tsx (Layout del grupo de pestañas)
 // Este archivo define el navegador de pestañas para las rutas dentro de la carpeta (tabs).
 import { Tabs } from 'expo-router';
-import React from 'react';
+import React from 'react'; // Removed useState and useEffect
 import { TabBarIcon } from '@/components/navigation/TabBarIcon';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+// Removed Image, View, ActivityIndicator, StyleSheet imports
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Keep AsyncStorage for constants
+
+// Define la URL base de tu backend (Still needed for other potential uses or just as a constant)
+// ¡CAMBIA ESTO POR LA URL DE TU SERVIDOR DE PRODUCCIÓN CUANDO DESPLIEGUES!
+// Asegúrate de que esta IP es accesible desde tu dispositivo/simulador
+const API_BASE_URL = 'http://192.166.1.142:3001'; // <-- Usar la misma URL que en otras pantallas
+
+// Define la clave para AsyncStorage (Still needed as a constant)
+const AUTH_TOKEN_KEY = 'userToken'; // Clave para guardar el token JWT
 
 // Este componente define la estructura de pestañas de tu aplicación.
 export default function TabLayout() {
     const colorScheme = useColorScheme();
+
+    // Removed State for profile photo URI and loading
+    // const [profilePhotoUri, setProfilePhotoUri] = useState<string | null>(null);
+    // const [isLoadingPhoto, setIsLoadingPhoto] = useState(true);
+
+    // Removed useEffect for fetching profile photo
+
 
     return (
         // El componente Tabs envuelve todas las pantallas que serán pestañas.
@@ -61,11 +78,26 @@ export default function TabLayout() {
                 name="profile" // Corresponde al archivo profile.tsx
                 options={{
                     title: 'Perfil', // Título para la pestaña de perfil.
+                    // Always use the default person icon
                     tabBarIcon: ({ color, focused }) => (
                         <TabBarIcon name={focused ? 'person' : 'person-outline'} color={color} />
                     ),
                 }}
             />
+
+            {/* Pestaña Social */}
+            <Tabs.Screen
+                name="social" // Corresponde al archivo social.tsx
+                options={{
+                    title: 'Social', // Título para la pestaña social.
+                    tabBarIcon: ({ color, focused }) => (
+                        // Usa el icono que prefieras para la pestaña social
+                        <TabBarIcon name={focused ? 'people' : 'people-outline'} color={color} /> // Example: people icon
+                    ),
+                }}
+            />
+
+
             {/*
                 La pantalla +not-found.tsx si está dentro de (tabs)
                 NO debe definirse aquí si ya está definida en el layout de la raíz.
@@ -82,3 +114,14 @@ export default function TabLayout() {
         </Tabs>
     );
 }
+
+// Removed profileTabIcon style
+// const styles = StyleSheet.create({
+//     profileTabIcon: {
+//         width: 30, // Adjust size as needed
+//         height: 30, // Adjust size as needed
+//         borderRadius: 15, // Make it round
+//         borderWidth: 1, // Add a border
+//         // borderColor is set dynamically in the component
+//     },
+// });

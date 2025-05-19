@@ -43,7 +43,14 @@ interface UserProfile {
     url_fotoperfil: string | null;
     foto_url_1: string | null;
     foto_url_2: string | null;
+    // Assuming your backend returns follower/following counts in the profile endpoint
+    // If not, you'll need to fetch these separately or update your backend
+    followers_count?: number | null;
+    following_count?: number | null;
 }
+
+// Function to generate a random number for placeholder counts
+const generateRandomCount = (max: number) => Math.floor(Math.random() * max);
 
 
 export default function ProfileScreen() {
@@ -70,6 +77,16 @@ export default function ProfileScreen() {
 
     // Eliminamos el estado para mostrar el valor no editable de "Sobre mí"
     // const [displayNombre, setDisplayNombre] = useState<string>(''); // Para mostrar 'Sobre mí'
+
+    // State for follower and following counts (added) - Initialize with random numbers
+    const [followersCount, setFollowersCount] = useState<number | null>(generateRandomCount(500)); // Random up to 500
+    const [followingCount, setFollowingCount] = useState<number | null>(generateRandomCount(500)); // Random up to 500
+
+    // State to control visibility of editable fields
+    const [isEditing, setIsEditing] = useState(false);
+
+    // State for user's level 1 progress (0 to 100) - Placeholder
+    const [level1Progress, setLevel1Progress] = useState(75); // Example progress
 
 
     const [isLoadingProfile, setIsLoadingProfile] = useState(true);
@@ -143,6 +160,13 @@ export default function ProfileScreen() {
                     // setDescription(profile.nombre || '');
                     // setDisplayNombre(profile.nombre || 'No especificado');
 
+                    // Set follower and following counts from the response if available
+                    setFollowersCount(profile.followers_count !== undefined && profile.followers_count !== null ? profile.followers_count : generateRandomCount(500)); // Use backend data or random
+                    setFollowingCount(profile.following_count !== undefined && profile.following_count !== null ? profile.following_count : generateRandomCount(500)); // Use backend data or random
+
+                    // Assuming level 1 progress is also returned in the profile endpoint
+                    // If not, you'll need to fetch it separately or update your backend
+                    // setLevel1Progress(profile.level1_progress !== undefined && profile.level1_progress !== null ? profile.level1_progress : 0);
 
                     setProfilePhotoUri(profile.url_fotoperfil || null);
 
@@ -243,100 +267,86 @@ export default function ProfileScreen() {
         const formData = new FormData();
         let hasChanges = false;
 
-        // Campos editables
-        const originalEmail = originalProfileData?.email || '';
-        const currentEmail = email.trim();
-        if (originalEmail !== currentEmail) {
-            formData.append('email', currentEmail);
-            hasChanges = true;
-        }
-
-        const originalUsername = originalProfileData?.username || '';
-        const currentUsername = username.trim();
-        if (originalUsername !== currentUsername) {
-            formData.append('username', currentUsername);
-            hasChanges = true;
-        }
-
-        // Campo "Sobre mí" (nombre en DB) - ELIMINADO COMPLETAMENTE, NO SE ENVÍA EN FORMDATA
-        // const originalDescription = originalProfileData?.nombre || '';
-        // const currentDescription = description.trim();
-        // if (originalDescription !== currentDescription) {
-        //     formData.append('nombre', currentDescription);
-        //     hasChanges = true;
-        // }
-
-        const currentPassword = password.trim();
-        if (currentPassword !== '') {
-            formData.append('password', currentPassword);
-            hasChanges = true;
-        }
-
-        const originalEdad = originalProfileData?.edad !== null && originalProfileData?.edad !== undefined ? String(originalProfileData.edad) : '';
-        const currentEdad = edad.trim();
-        if (originalEdad !== currentEdad) {
-            if (currentEdad !== '') {
-                const parsedEdad = parseInt(currentEdad, 10);
-                if (!isNaN(parsedEdad)) {
-                    formData.append('edad', String(parsedEdad));
-                    hasChanges = true;
-                } else {
-                    Alert.alert('Error', 'El campo edad debe ser un número válido.');
-                    setIsSaving(false);
-                    return;
-                }
-            } else {
-                formData.append('edad', ''); // Enviar vacío para poner a NULL
+        // Campos editables (only add if isEditing is true)
+        if (isEditing) {
+            const originalEmail = originalProfileData?.email || '';
+            const currentEmail = email.trim();
+            if (originalEmail !== currentEmail) {
+                formData.append('email', currentEmail);
                 hasChanges = true;
             }
-        }
 
-        // Campo Género (Editable con Picker)
-        const originalGenero = originalProfileData?.genero || '';
-        const currentGenero = genero; // No trim aquí si el Picker usa '' para "Selecciona..."
-        if (originalGenero !== currentGenero) {
-            // Solo añadir al FormData si el valor no es la cadena vacía ''
-            if (currentGenero !== '') {
-                formData.append('genero', currentGenero);
-            } else {
-                // Si el valor es '', enviar explícitamente una cadena vacía o null para que el backend lo maneje
-                formData.append('genero', ''); // Backend debería interpretar '' como NULL
+            const originalUsername = originalProfileData?.username || '';
+            const currentUsername = username.trim();
+            if (originalUsername !== currentUsername) {
+                formData.append('username', currentUsername);
+                hasChanges = true;
             }
-            hasChanges = true;
-        } else if (currentGenero === '' && originalProfileData?.genero !== null) {
-            // Si el valor actual es '' pero el original NO era NULL, significa que se cambió a ''
-            formData.append('genero', '');
-            hasChanges = true;
-        }
 
-
-        const originalEstudiosTrabajo = originalProfileData?.estudios_trabajo || '';
-        const currentEstudiosTrabajo = estudiosTrabajo.trim();
-        if (originalEstudiosTrabajo !== currentEstudiosTrabajo) {
-            formData.append('estudios_trabajo', currentEstudiosTrabajo);
-            hasChanges = true;
-        } else if (currentEstudiosTrabajo === '' && originalProfileData?.estudios_trabajo !== null) {
-            formData.append('estudios_trabajo', '');
-            hasChanges = true;
-        }
-
-
-        // Campo Orientación Sexual (Editable con Picker)
-        const originalOrientacionSexual = originalProfileData?.orientacion_sexual || '';
-        const currentOrientacionSexual = orientacionSexual; // No trim aquí si el Picker usa '' para "Selecciona..."
-        if (originalOrientacionSexual !== currentOrientacionSexual) {
-            // Solo añadir al FormData si el valor no es la cadena vacía ''
-            if (currentOrientacionSexual !== '') {
-                formData.append('orientacion_sexual', currentOrientacionSexual);
-            } else {
-                // Si el valor es '', enviar explícitamente una cadena vacía o null para que el backend lo maneje
-                formData.append('orientacion_sexual', ''); // Backend debería interpretar '' como NULL
+            const currentPassword = password.trim();
+            if (currentPassword !== '') {
+                formData.append('password', currentPassword);
+                hasChanges = true;
             }
-            hasChanges = true;
-        } else if (currentOrientacionSexual === '' && originalProfileData?.orientacion_sexual !== null) {
-            // Si el valor actual es '' pero el original NO era NULL, significa que se cambió a ''
-            formData.append('orientacion_sexual', '');
-            hasChanges = true;
+
+            const originalEdad = originalProfileData?.edad !== null && originalProfileData?.edad !== undefined ? String(originalProfileData.edad) : '';
+            const currentEdad = edad.trim();
+            if (originalEdad !== currentEdad) {
+                if (currentEdad !== '') {
+                    const parsedEdad = parseInt(currentEdad, 10);
+                    if (!isNaN(parsedEdad)) {
+                        formData.append('edad', String(parsedEdad));
+                        hasChanges = true;
+                    } else {
+                        Alert.alert('Error', 'El campo edad debe ser un número válido.');
+                        setIsSaving(false);
+                        return;
+                    }
+                } else {
+                    formData.append('edad', ''); // Enviar vacío para poner a NULL
+                    hasChanges = true;
+                }
+            }
+
+            const originalGenero = originalProfileData?.genero || '';
+            const currentGenero = genero;
+            if (originalGenero !== currentGenero) {
+                if (currentGenero !== '') {
+                    formData.append('genero', currentGenero);
+                } else {
+                    formData.append('genero', '');
+                }
+                hasChanges = true;
+            } else if (currentGenero === '' && originalProfileData?.genero !== null) {
+                formData.append('genero', '');
+                hasChanges = true;
+            }
+
+
+            const originalEstudiosTrabajo = originalProfileData?.estudios_trabajo || '';
+            const currentEstudiosTrabajo = estudiosTrabajo.trim();
+            if (originalEstudiosTrabajo !== currentEstudiosTrabajo) {
+                formData.append('estudios_trabajo', currentEstudiosTrabajo);
+                hasChanges = true;
+            } else if (currentEstudiosTrabajo === '' && originalProfileData?.estudios_trabajo !== null) {
+                formData.append('estudios_trabajo', '');
+                hasChanges = true;
+            }
+
+
+            const originalOrientacionSexual = originalProfileData?.orientacion_sexual || '';
+            const currentOrientacionSexual = orientacionSexual;
+            if (originalOrientacionSexual !== currentOrientacionSexual) {
+                if (currentOrientacionSexual !== '') {
+                    formData.append('orientacion_sexual', currentOrientacionSexual);
+                } else {
+                    formData.append('orientacion_sexual', '');
+                }
+                hasChanges = true;
+            } else if (currentOrientacionSexual === '' && originalProfileData?.orientacion_sexual !== null) {
+                formData.append('orientacion_sexual', '');
+                hasChanges = true;
+            }
         }
 
 
@@ -395,18 +405,30 @@ export default function ProfileScreen() {
                 setGenero(data.profile.genero || '');
                 setEstudiosTrabajo(data.profile.estudios_trabajo || '');
                 setOrientacionSexual(data.profile.orientacion_sexual || '');
-                // Ya no actualizamos displayNombre ya que el campo fue eliminado
-                // setDisplayNombre(data.profile.nombre || 'No especificado');
+
+                // Update follower and following counts after saving if they are returned
+                setFollowersCount(data.profile.followers_count !== undefined && data.profile.followers_count !== null ? data.profile.followers_count : followersCount);
+                setFollowingCount(data.profile.following_count !== undefined && data.profile.following_count !== null ? data.profile.following_count : followingCount);
             }
 
             setPassword('');
             setNewProfilePhotoFile(null);
+            setIsEditing(false); // Exit editing mode after successful save
 
         } catch (error: any) {
             console.error('Network or unexpected error saving profile:', error);
             Alert.alert('Error de conexión', 'No se pudo conectar con el servidor para guardar los cambios.');
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    // Handler to toggle editing mode
+    const toggleEditing = () => {
+        setIsEditing(!isEditing);
+        // Optionally reset password field when exiting edit mode
+        if (isEditing) {
+            setPassword('');
         }
     };
 
@@ -435,15 +457,18 @@ export default function ProfileScreen() {
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="#1e1e1e" />
 
-            <View style={styles.headerBar}>
-                <Text style={styles.title}>Editar Perfil</Text>
-            </View>
-
             <KeyboardAvoidingView
                 style={styles.flex}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
                 <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
+
+                    {/* User Info Section at the top (Username only) */}
+                    <View style={styles.userInfoSection}>
+                        {/* Display username */}
+                        <Text style={styles.profileUsernameText}>{username?.toUpperCase() || ''}</Text>
+                    </View>
+
 
                     {/* Sección de Foto de Perfil */}
                     <TouchableOpacity onPress={pickProfileImage} style={styles.photoContainer}>
@@ -460,123 +485,139 @@ export default function ProfileScreen() {
                         </View>
                     </TouchableOpacity>
 
+                    {/* Remove Photo Button (always visible if photo exists) */}
                     {profilePhotoUri && (
                         <TouchableOpacity onPress={handleRemoveProfilePhoto} style={styles.removePhotoButton}>
                             <Text style={styles.removePhotoButtonText}>Eliminar Foto de Perfil</Text>
                         </TouchableOpacity>
                     )}
 
-                    {/* Campos de texto y selección */}
-                    <Text style={styles.label}>Username:</Text>
-                    <TextInput
-                        style={styles.input}
-                        value={username}
-                        onChangeText={setUsername}
-                        placeholder="Tu nombre de usuario"
-                        placeholderTextColor="#aaa"
-                        autoCapitalize="none"
-                    />
+                    {/* Follower/Following Counts and Progress Bar (Moved below photo) */}
+                    <View style={styles.followCountsContainer}>
+                        <Text style={styles.profileFollowCountText}>Seguidores: {followersCount !== null ? followersCount : '--'}</Text>
+                        <Text style={styles.profileFollowCountText}>Seguidos: {followingCount !== null ? followingCount : '--'}</Text>
+                    </View>
 
-                    <Text style={styles.label}>Email:</Text>
-                    <TextInput
-                        style={styles.input}
-                        value={email}
-                        onChangeText={setEmail}
-                        placeholder="Tu correo electrónico"
-                        placeholderTextColor="#aaa"
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                    />
-
-                    {/* Campo "Sobre mí" (Eliminado completamente de la UI) */}
-                    {/* <Text style={styles.label}>Sobre mí:</Text> */}
-                    {/* <View style={styles.displayValueContainer}> */}
-                    {/* <Text style={styles.displayValueText}>{displayNombre}</Text> */}
-                    {/* </View> */}
-
-
-                    <Text style={styles.label}>Edad:</Text>
-                    <TextInput
-                        style={styles.input}
-                        value={edad}
-                        onChangeText={setEdad}
-                        placeholder="Tu edad"
-                        placeholderTextColor="#aaa"
-                        keyboardType="number-pad"
-                    />
-
-                    {/* Campo Género (Editable con Picker) - Opciones sincronizadas con signup */}
-                    <Text style={styles.label}>Género:</Text>
-                    <View style={styles.pickerContainer}>
-                        <Picker
-                            selectedValue={genero} // Usar estado 'genero'
-                            onValueChange={(itemValue: string) => setGenero(itemValue)} // Actualizar estado 'genero'
-                            style={styles.picker}
-                            dropdownIconColor="#fff" // Asegura que el ícono sea visible
-                        >
-                            {/* Opción por defecto con value="" */}
-                            <Picker.Item label="Selecciona tu género" value="" enabled={false} style={{ color: '#aaa' }} />
-                            <Picker.Item label="Masculino" value="Masculino" style={{ color: '#fff' }} />
-                            <Picker.Item label="Femenino" value="Femenino" style={{ color: '#fff' }} />
-                            <Picker.Item label="Otro" value="Otro" style={{ color: '#fff' }} />
-                            {/* Eliminadas opciones que no están en signup */}
-                        </Picker>
+                    {/* Level 1 Progress Bar (Placeholder) */}
+                    <View style={styles.progressBarContainer}>
+                        <Text style={styles.progressBarLabel}>Nivel 1 Pollete 🐔:</Text> {/* Added (Pollete) */}
+                        <View style={styles.progressBarBackground}>
+                            <View style={[styles.progressBarFill, { width: `${level1Progress}%` }]} />
+                        </View>
+                        <Text style={styles.progressText}>{level1Progress}%</Text>
                     </View>
 
 
-                    {/* Campo Estudios/Trabajo */}
-                    <Text style={styles.label}>Estudios/Trabajo:</Text>
-                    <TextInput
-                        style={styles.input}
-                        value={estudiosTrabajo}
-                        onChangeText={setEstudiosTrabajo}
-                        placeholder="Tu ocupación o nivel de estudios"
-                        placeholderTextColor="#aaa"
-                    />
-
-                    {/* Campo Orientación Sexual (Editable con Picker) - Opciones sincronizadas con signup */}
-                    <Text style={styles.label}>Orientación Sexual:</Text>
-                    <View style={styles.pickerContainer}>
-                        <Picker
-                            selectedValue={orientacionSexual} // Usar estado 'orientacionSexual'
-                            onValueChange={(itemValue: string) => setOrientacionSexual(itemValue)} // Actualizar estado 'orientacionSexual'
-                            style={styles.picker}
-                            dropdownIconColor="#fff" // Asegura que el ícono sea visible
-                        >
-                            {/* Opción por defecto con value="" */}
-                            <Picker.Item label="Selecciona tu orientación" value="" enabled={false} style={{ color: '#aaa' }} />
-                            <Picker.Item label="Heterosexual" value="Heterosexual" style={{ color: '#fff' }} />
-                            <Picker.Item label="Bisexual" value="Bisexual" style={{ color: '#fff' }} />
-                            <Picker.Item label="Homosexual" value="Homosexual" style={{ color: '#fff' }} />
-                            <Picker.Item label="Otro" value="Otro" style={{ color: '#fff' }} />
-                            {/* Eliminadas opciones que no están en signup */}
-                        </Picker>
-                    </View>
-
-
-                    {/* Campo para cambiar contraseña */}
-                    <Text style={styles.label}>Nueva Contraseña (dejar vacío para no cambiar):</Text>
-                    <TextInput
-                        style={styles.input}
-                        value={password}
-                        onChangeText={setPassword}
-                        placeholder="Introduce nueva contraseña"
-                        placeholderTextColor="#aaa"
-                        secureTextEntry
-                    />
-
-                    {/* Botón de Guardar */}
-                    <TouchableOpacity
-                        style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
-                        onPress={handleSave}
-                        disabled={isSaving}
-                    >
-                        {isSaving ? (
-                            <ActivityIndicator color="#fff" />
-                        ) : (
-                            <Text style={styles.saveButtonText}>Guardar Cambios</Text>
-                        )}
+                    {/* Button to toggle editing */}
+                    <TouchableOpacity style={styles.editButton} onPress={toggleEditing}>
+                        <Text style={styles.editButtonText}>{isEditing ? 'Cancelar Edición' : 'Editar Información'}</Text>
                     </TouchableOpacity>
+
+
+                    {/* Editable Fields (Conditionally rendered) */}
+                    {isEditing && (
+                        <View>
+                            {/* Campos de texto y selección */}
+                            <Text style={styles.label}>Username:</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={username}
+                                onChangeText={setUsername}
+                                placeholder="Tu nombre de usuario"
+                                placeholderTextColor="#aaa"
+                                autoCapitalize="none"
+                            />
+
+                            <Text style={styles.label}>Email:</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={email}
+                                onChangeText={setEmail}
+                                placeholder="Tu correo electrónico"
+                                placeholderTextColor="#aaa"
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                            />
+
+                            <Text style={styles.label}>Edad:</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={edad}
+                                onChangeText={setEdad}
+                                placeholder="Tu edad"
+                                placeholderTextColor="#aaa"
+                                keyboardType="number-pad"
+                            />
+
+                            {/* Campo Género (Editable con Picker) */}
+                            <Text style={styles.label}>Género:</Text>
+                            <View style={styles.pickerContainer}>
+                                <Picker
+                                    selectedValue={genero}
+                                    onValueChange={(itemValue: string) => setGenero(itemValue)}
+                                    style={styles.picker}
+                                    dropdownIconColor="#fff"
+                                >
+                                    <Picker.Item label="Selecciona tu género" value="" enabled={false} style={{ color: '#aaa' }} />
+                                    <Picker.Item label="Masculino" value="Masculino" style={{ color: '#fff' }} />
+                                    <Picker.Item label="Femenino" value="Femenino" style={{ color: '#fff' }} />
+                                    <Picker.Item label="Otro" value="Otro" style={{ color: '#fff' }} />
+                                </Picker>
+                            </View>
+
+                            {/* Campo Estudios/Trabajo */}
+                            <Text style={styles.label}>Estudios/Trabajo:</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={estudiosTrabajo}
+                                onChangeText={setEstudiosTrabajo}
+                                placeholder="Tu ocupación o nivel de estudios"
+                                placeholderTextColor="#aaa"
+                            />
+
+                            {/* Campo Orientación Sexual (Editable con Picker) */}
+                            <Text style={styles.label}>Orientación Sexual:</Text>
+                            <View style={styles.pickerContainer}>
+                                <Picker
+                                    selectedValue={orientacionSexual}
+                                    onValueChange={(itemValue: string) => setOrientacionSexual(itemValue)}
+                                    style={styles.picker}
+                                    dropdownIconColor="#fff"
+                                >
+                                    <Picker.Item label="Selecciona tu orientación" value="" enabled={false} style={{ color: '#aaa' }} />
+                                    <Picker.Item label="Heterosexual" value="Heterosexual" style={{ color: '#fff' }} />
+                                    <Picker.Item label="Bisexual" value="Bisexual" style={{ color: '#fff' }} />
+                                    <Picker.Item label="Homosexual" value="Homosexual" style={{ color: '#fff' }} />
+                                    <Picker.Item label="Otro" value="Otro" style={{ color: '#fff' }} />
+                                </Picker>
+                            </View>
+
+                            {/* Campo para cambiar contraseña */}
+                            <Text style={styles.label}>Nueva Contraseña (dejar vacío para no cambiar):</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={password}
+                                onChangeText={setPassword}
+                                placeholder="Introduce nueva contraseña"
+                                placeholderTextColor="#aaa"
+                                secureTextEntry
+                            />
+
+                            {/* Botón de Guardar (only visible when editing) */}
+                            <TouchableOpacity
+                                style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+                                onPress={handleSave}
+                                disabled={isSaving}
+                            >
+                                {isSaving ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <Text style={styles.saveButtonText}>Guardar Cambios</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
 
                 </ScrollView>
             </KeyboardAvoidingView>
@@ -596,19 +637,6 @@ const styles = StyleSheet.create({
     inner: {
         padding: 20,
         paddingBottom: 50,
-    },
-    headerBar: {
-        paddingHorizontal: 20,
-        paddingVertical: 15,
-        backgroundColor: '#2a2a2a',
-        borderBottomWidth: 1,
-        borderBottomColor: '#333',
-        alignItems: 'center',
-    },
-    title: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#fff',
     },
     loadingContainer: {
         flex: 1,
@@ -633,6 +661,59 @@ const styles = StyleSheet.create({
         color: '#ff6347',
         textAlign: 'center',
     },
+    // Styles for user info section (Username only)
+    userInfoSection: {
+        marginBottom: 24, // Space below username
+        alignItems: 'center', // Center content horizontally
+        marginTop: 10, // Add some space from the top/header
+    },
+    profileUsernameText: { // Specific style for username in profile
+        fontSize: 28, // Larger font size
+        color: '#e14eca', // Lilac color
+        fontWeight: 'bold',
+        // Removed marginBottom here as follow counts are moved
+    },
+    // Styles for Follower/Following Counts Container (Moved)
+    followCountsContainer: {
+        flexDirection: 'row', // Arrange follower/following horizontally
+        gap: 20, // Space between counts
+        marginTop: 20, // Space above follow counts (moved below photo)
+        marginBottom: 20, // Space below follow counts
+        alignSelf: 'center', // Center the container
+    },
+    profileFollowCountText: { // Specific style for follower/following counts in profile
+        fontSize: 16,
+        color: '#aaa', // Lighter color for counts
+    },
+    // Styles for Progress Bar (Moved)
+    progressBarContainer: {
+        width: '100%',
+        marginTop: 10, // Space above progress bar (moved below follow counts)
+        alignItems: 'center',
+        marginBottom: 20, // Space below progress bar
+    },
+    progressBarLabel: {
+        fontSize: 16,
+        color: '#fff',
+        marginBottom: 5,
+    },
+    progressBarBackground: {
+        width: '80%', // Adjust width as needed
+        height: 10,
+        backgroundColor: '#333',
+        borderRadius: 5,
+        overflow: 'hidden',
+    },
+    progressBarFill: {
+        height: '100%',
+        backgroundColor: '#e14eca', // Lilac color for progress
+        borderRadius: 5,
+    },
+    progressText: {
+        fontSize: 14,
+        color: '#fff',
+        marginTop: 5,
+    },
     photoContainer: {
         width: 150,
         height: 150,
@@ -641,7 +722,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         alignSelf: 'center',
-        marginBottom: 20,
+        marginBottom: 20, // Space below photo container
         overflow: 'hidden',
         borderWidth: 2,
         borderColor: '#e14eca',
@@ -674,10 +755,20 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         backgroundColor: '#ff6347',
         borderRadius: 5,
+        marginBottom: 20, // Add space below remove button
     },
-    removePhotoButtonText: {
+    editButton: {
+        backgroundColor: '#9e6fca', // Purple color for edit button
+        borderRadius: 8,
+        paddingVertical: 12,
+        alignItems: 'center',
+        marginTop: 20, // Space above the button
+        marginBottom: 20, // Space below the button
+    },
+    editButtonText: {
         color: '#fff',
-        fontSize: 14,
+        fontSize: 16,
+        fontWeight: 'bold',
     },
     label: {
         fontSize: 16,
@@ -698,47 +789,33 @@ const styles = StyleSheet.create({
     multilineInput: {
         height: 100,
     },
-    // Estilos para Pickers (Desplegables) - Reutilizamos los estilos del signup
+    // Styles for Pickers (Dropdowns)
     pickerContainer: {
         flexDirection: 'row',
-        backgroundColor: '#333', // Fondo oscuro
+        backgroundColor: '#333', // Dark background
         borderRadius: 8,
         marginTop: 8,
         alignItems: 'center',
         width: '100%',
-        paddingLeft: 10, // Espacio para el ícono si lo añades
+        paddingLeft: 10, // Space for icon if you add one
         overflow: 'hidden',
-        height: 50, // Altura consistente
-        borderWidth: 1, // Borde para que coincida con los inputs
-        borderColor: '#555', // Color del borde
+        height: 50, // Consistent height
+        borderWidth: 1, // Border to match inputs
+        borderColor: '#555', // Border color
     },
     picker: {
         flex: 1,
-        color: '#fff', // Color del texto del picker
+        color: '#fff', // Picker text color
         ...Platform.select({
             ios: {
-                // Estilos específicos de iOS si es necesario
+                // iOS specific styles if needed
             },
             android: {
-                // Estilos específicos de Android si es necesario
-                height: 50, // Asegura que la altura sea consistente en Android
+                // Android specific styles if needed
+                height: 50, // Ensure consistent height on Android
             },
         }),
     },
-    // Estilos para mostrar valores no editables (solo para "Sobre mí") - Eliminados ya que el campo fue quitado
-    // displayValueContainer: {
-    //     backgroundColor: '#333',
-    //     borderRadius: 8,
-    //     paddingHorizontal: 15,
-    //     paddingVertical: 12,
-    //     borderWidth: 1,
-    //     borderColor: '#555',
-    //     justifyContent: 'center', // Centrar texto verticalmente si es necesario
-    // },
-    // displayValueText: {
-    //     fontSize: 16,
-    //     color: '#fff', // Color del texto mostrado
-    // },
     saveButton: {
         backgroundColor: '#e14eca',
         borderRadius: 8,
