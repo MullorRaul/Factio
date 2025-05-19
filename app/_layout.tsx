@@ -1,29 +1,29 @@
-// app/_layout.tsx (Layout de la raíz)
-import { Stack } from 'expo-router';
+// app/_layout.tsx
+import 'react-native-gesture-handler';          // 👈 debe ir lo primero
 import React from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Stack } from 'expo-router';
 
 export default function RootLayout() {
     return (
-        <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <Stack>
+                {/* Tabs principales y autenticación */}
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
 
-            {/* Pantallas de eventos ya existentes */}
-            <Stack.Screen name="eventos_delirium" options={{ headerShown: false }} />
-            <Stack.Screen name="eventos_gaudi" options={{ headerShown: false }} />
-            <Stack.Screen name="eventos_don_vito" options={{ headerShown: false }} />
+                {/* Páginas de eventos ya existentes */}
+                <Stack.Screen name="eventos_delirium" options={{ headerShown: false }} />
+                <Stack.Screen name="eventos_gaudi"    options={{ headerShown: false }} />
+                <Stack.Screen name="eventos_don_vito" options={{ headerShown: false }} />
 
-            {/* --- ¡Añadir estas nuevas líneas! --- */}
-            {/* Define la pantalla eventos_gavana.tsx que está directamente en la carpeta `app`. */}
-            <Stack.Screen name="eventos_gavana" options={{ headerShown: false }} />
+                {/* ➕ Nuevas pantallas de eventos */}
+                <Stack.Screen name="eventos_gavana" options={{ headerShown: false }} />
+                <Stack.Screen name="eventos_epsa"   options={{ headerShown: false }} />
 
-            {/* Define la pantalla eventos_epsa.tsx que está directamente en la carpeta `app`. */}
-            <Stack.Screen name="eventos_epsa" options={{ headerShown: false }} />
-            {/* --- Fin de nuevas líneas --- */}
-
-
-            <Stack.Screen name="+not-found" options={{ headerShown: false }} />
-
-        </Stack>
+                {/* 404 */}
+                <Stack.Screen name="+not-found" options={{ headerShown: false }} />
+            </Stack>
+        </GestureHandlerRootView>
     );
 }
