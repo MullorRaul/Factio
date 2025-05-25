@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
-const API_BASE_URL = 'https://307d-2a0c-5a82-c002-1600-5468-aff7-895-fea0.ngrok-free.app';
+const API_BASE_URL = 'https://07ce-2a0c-5a82-c002-1600-817a-5b77-bec4-2246.ngrok-free.app';
 
 // Example Achievement Data (Replace with real data from your backend)
 const achievementsData = [

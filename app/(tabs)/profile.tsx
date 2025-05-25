@@ -25,7 +25,7 @@ import { useRouter } from 'expo-router';
 
 // Define la URL base de tu backend
 // IMPORTANTE: Reemplaza esta URL con la URL real de tu API de backend
-const API_BASE_URL = 'https://307d-2a0c-5a82-c002-1600-5468-aff7-895-fea0.ngrok-free.app'; // <-- IP CORREGIDA
+const API_BASE_URL = 'https://07ce-2a0c-5a82-c002-1600-817a-5b77-bec4-2246.ngrok-free.app'; // <-- IP CORREGIDA
 
 // Clave para AsyncStorage donde guardamos el token JWT
 const AUTH_TOKEN_KEY = 'userToken';
