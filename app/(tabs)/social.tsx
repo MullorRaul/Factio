@@ -4,8 +4,9 @@ import {
     StyleSheet, ScrollView, SafeAreaView, Alert, Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BASE_URL } from '../../app/urlgrok';
 
-const API_BASE_URL = 'https://955a-2a0c-5a82-c002-1600-4960-aa6c-4865-16e1.ngrok-free.app';
+const API_BASE_URL = BASE_URL;
 
 // Example Achievement Data (Replace with real data from your backend)
 const achievementsData = [

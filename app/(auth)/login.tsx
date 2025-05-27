@@ -11,7 +11,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Define la URL base de tu backend
 // ¡CAMBIA ESTO POR LA URL DE TU SERVIDOR DE PRODUCCIÓN CUANDO DESPLIEGUES!
-const API_BASE_URL = 'https://955a-2a0c-5a82-c002-1600-4960-aa6c-4865-16e1.ngrok-free.app'; // <-- Asegúrate de que esta IP es accesible desde tu dispositivo/simulador
+import { BASE_URL } from '../../app/urlgrok';
+const API_BASE_URL = BASE_URL // <-- Asegúrate de que esta IP es accesible desde tu dispositivo/simulador
 
 // Define la clave para AsyncStorage
 const AUTH_TOKEN_KEY = 'userToken'; // Clave para guardar el token JWT
