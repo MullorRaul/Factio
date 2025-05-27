@@ -45,24 +45,24 @@ const achievementsData = [
         id: 'secret',
         name: 'Lamine Yamal',
         // AQUÍ es donde pones la fuente de la imagen para este logro
-        // iconSource: require('@/assets/images/lamine_yamal_icon.png'),
-        iconSource: null, // Reemplaza null con la fuente real de la imagen
+        iconSource: require('../../assets/images/lamine.png'),
+        // Reemplaza null con la fuente real de la imagen
         description: '¡Diste la asistencia de tu vida!'
     },
     {
         id: 'earlybird',
         name: 'David',
         // AQUÍ es donde pones la fuente de la imagen para este logro
-        // iconSource: require('@/assets/images/david_icon.png'),
-        iconSource: null, // Reemplaza null con la fuente real de la imagen
+        iconSource: require('@/assets/images/goliat.png'),
+        // Reemplaza null con la fuente real de la imagen
         description: 'Contra todo pronostico, venciste a Goliat'
     },
     {
         id: 'nightowl',
         name: 'El Tigre',
         // AQUÍ es donde pones la fuente de la imagen para este logro
-        // iconSource: require('@/assets/images/el_tigre_icon.png'),
-        iconSource: null, // Reemplaza null con la fuente real de la imagen
+        iconSource: require('@/assets/images/tigre.png'),
+        // Reemplaza null con la fuente real de la imagen
         description: 'Que es una ralla más para un tigre.'
     },
     // Add more achievements here
@@ -94,24 +94,8 @@ const App: React.FC = () => {
 
     // Handler for the search button click
     const handleSearch = () => {
-        // If search results are currently visible, hide them
-        if (searchResultsVisible) {
-            setSearchResultsVisible(false);
-        } else {
-            // If search results are hidden, perform the search (simulated)
-            if (usernameSearch.trim() !== '') {
-                // In a real app, you would call your backend here
-                // to search for users based on the usernameSearch state.
-                // For now, we just simulate showing results.
-                setSearchResultsVisible(true);
-            } else {
-                // If input is empty, still hide results (or do nothing)
-                setSearchResultsVisible(false);
-            }
-        }
-        // Always reset the request sent message and button state on any search action
-        setRequestSentMessageVisible(false);
-        setAddFriendButtonState('initial');
+        // ESTA FUNCIÓN AHORA NO HACE NADA
+        console.log('Botón Buscar presionado, pero no hace nada.');
     };
 
 
@@ -124,17 +108,8 @@ const App: React.FC = () => {
 
     // Handler for the invite button click (Modified to toggle visibility)
     const handleInvite = () => {
-        // Toggle the visibility state
-        if (inviteLinkVisible) {
-            setInviteLinkVisible(false); // Hide the link if visible
-        } else {
-            // Simulate generating and showing an invite link
-            console.log('Generar enlace de invitación'); // Log to console
-            Alert.alert('Invitar Amigos', 'Comparte este enlace para invitar amigos: https://tuapp.com/invitar/abcdef'); // Show alert
-            setInviteLinkVisible(true); // Show the invite link
-        }
-
-        // In a real application, you would generate a unique link and handle sharing options.
+        // ESTA FUNCIÓN AHORA NO HACE NADA
+        console.log('Botón Invitar presionado, pero no hace nada.');
     };
 
     const handleAchievementPress = (achievementId: string) => {
@@ -359,7 +334,7 @@ const styles = StyleSheet.create({
         flex: 1,
         color: '#fff', // White text
         paddingVertical: 0,
-        paddingHorizontal: 8, // Added horizontal padding
+        paddingHorizontal: 8.0005, // Added horizontal padding
     },
     buttonGradient: {
         borderRadius: 8, // Adjusted border radius
