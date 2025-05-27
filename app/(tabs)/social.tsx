@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
         flex: 1,
         color: '#fff', // White text
         paddingVertical: 0,
-        paddingHorizontal: 8.0005, // Added horizontal padding
+        paddingHorizontal: 8, // Added horizontal padding
     },
     buttonGradient: {
         borderRadius: 8, // Adjusted border radius
