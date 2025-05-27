@@ -251,7 +251,7 @@ export default function OffersScreen() {
                     </View>
 
                     {/* Timer (sin cambios) */}
-                    <Animated.View style={[styles.timerContainer, { bottom: TAB_BAR_HEIGHT, width: timer }]} />
+
                 </ImageBackground>
             </View>
         );
