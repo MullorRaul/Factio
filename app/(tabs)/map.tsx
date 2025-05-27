@@ -100,7 +100,11 @@ export default function PantallaMapa(){
     const [friends,setFriends]=useState<Friend[]>([]); const [crowd,setCrowd]=useState<CrowdDot[]>([]);
 
     /* chat */
-    const [message,setMessage]=useState(''); const [balloons,setBalloons]=useState<{id:string;text:string;lat:number;lng:number;op:Animated.Value}[]>([]);
+    const [message,setMessage]=useState('');
+    // Cambiamos el tipo de `balloons` para que solo contenga un posible mensaje.
+    const [balloons,setBalloons]=useState<{id:string;text:string;lat:number;lng:number;op:Animated.Value}[]>([]);
+    const currentBalloonOpacity = useRef(new Animated.Value(0)).current; // Ref para la opacidad del globo actual.
+
 
     const mapRef=useRef<MapView>(null);
 
@@ -133,9 +137,40 @@ export default function PantallaMapa(){
 
     const sendMsg=()=>{
         if(!message.trim()||!region) return;
-        const id=Date.now().toString(); const op=new Animated.Value(0);
-        setBalloons(b=>[...b,{id,text:message,lat:region.latitude,lng:region.longitude,op}]);
-        Animated.timing(op,{toValue:1,duration:300,useNativeDriver:true}).start(); setMessage('');
+
+        const newBalloon = {
+            id: Date.now().toString(),
+            text: message,
+            lat: region.latitude,
+            lng: region.longitude,
+            op: new Animated.Value(0) // Cada globo tiene su propia opacidad animada
+        };
+
+        // Si ya hay un globo, lo desvanecemos y luego lo reemplazamos.
+        if (balloons.length > 0) {
+            Animated.timing(balloons[0].op, {
+                toValue: 0,
+                duration: 200, // Duración para que el globo antiguo se desvanezca
+                useNativeDriver: true,
+            }).start(() => {
+                setBalloons([newBalloon]); // Reemplaza el array con el nuevo globo
+                Animated.timing(newBalloon.op, {
+                    toValue: 1,
+                    duration: 300, // Duración para que el nuevo globo aparezca
+                    useNativeDriver: true,
+                }).start();
+            });
+        } else {
+            // Si no hay globos, simplemente lo añadimos y lo hacemos aparecer.
+            setBalloons([newBalloon]);
+            Animated.timing(newBalloon.op, {
+                toValue: 1,
+                duration: 300,
+                useNativeDriver: true,
+            }).start();
+        }
+
+        setMessage('');
     };
 
     const pubsFiltrados=useMemo(()=>pubs.filter(p=>{
@@ -165,13 +200,14 @@ export default function PantallaMapa(){
                     <Callout tooltip><View style={styles.callout}><Text style={styles.calloutText}>{f.name}</Text></View></Callout>
                 </Marker>)}
 
-                {factioOn&&balloons.map(b=>(
-                    <Marker key={b.id} coordinate={{latitude:b.lat,longitude:b.lng}} anchor={{x:0.5,y:1}}>
-                        <Animated.View style={[styles.balloon,{opacity:b.op}]}>
-                            <Text style={styles.balloonText}>{b.text}</Text>
+                {/* MODIFICACIÓN: Renderiza solo el primer (y único) globo en el array */}
+                {factioOn && balloons.length > 0 && (
+                    <Marker key={balloons[0].id} coordinate={{latitude:balloons[0].lat,longitude:balloons[0].lng}} anchor={{x:0.5,y:1}}>
+                        <Animated.View style={[styles.balloon,{opacity:balloons[0].op}]}>
+                            <Text style={styles.balloonText}>{balloons[0].text}</Text>
                         </Animated.View>
                     </Marker>
-                ))}
+                )}
             </MapView>
 
             {/* búsqueda + chips */}
@@ -188,6 +224,8 @@ export default function PantallaMapa(){
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
                 setFactioOn(v=>!v);
                 lottieRef.current?.reset();lottieRef.current?.play();
+                // Opcional: Cuando el modo Factio se desactiva, borrar el globo del mensaje
+                if (factioOn) setBalloons([]);
             }}>
                 <LottieView ref={lottieRef} source={factioOn?fireAnim:iceAnim} loop autoPlay style={styles.factioAnim}/>
                 <Text style={styles.factioBtnText}>{factioOn?'Modo Factio 😈🔥':'Modo Aburrido 💤'}</Text>
@@ -197,7 +235,7 @@ export default function PantallaMapa(){
             {factioOn&&<KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':undefined} style={styles.chatBar}>
                 <TextInput style={styles.chatInput} placeholder="Mensaje a colegas..." placeholderTextColor="#777" value={message} onChangeText={setMessage}/>
                 <TouchableOpacity style={styles.chatIcon} onPress={sendMsg}><Ionicons name="send" size={18} color="#fff"/></TouchableOpacity>
-                <TouchableOpacity style={styles.chatIcon} onPress={()=>nav.navigate('chat_feed' as never)}><Ionicons name="chatbubble-ellipses" size={18} color="#fff"/></TouchableOpacity>
+
             </KeyboardAvoidingView>}
 
             {/* detalle pub */}
