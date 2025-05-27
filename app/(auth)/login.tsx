@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import {
     View, Text, TextInput, TouchableOpacity,
-    StyleSheet, StatusBar, Alert, ActivityIndicator
+    StyleSheet, StatusBar, Alert, ActivityIndicator, Platform // Importar Platform
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -68,8 +68,17 @@ export default function LoginScreen() {
         }
     };
 
-    // @ts-ignore
-    // @ts-ignore
+    // Funciones vacías para los botones de redes sociales (no funcionales)
+    const handleGoogleLogin = () => {
+        console.log('Iniciar sesión con Google (no funcional)');
+        // Aquí iría la lógica real de inicio de sesión con Google
+    };
+
+    const handleAppleLogin = () => {
+        console.log('Iniciar sesión con Apple (no funcional)');
+        // Aquí iría la lógica real de inicio de sesión con Apple
+    };
+
     return (
         <View style={styles.container}>
             <StatusBar style="light" />
@@ -124,8 +133,28 @@ export default function LoginScreen() {
                 </TouchableOpacity>
             </LinearGradient>
 
+            {/* Separador "O inicia mediante" con líneas */}
+            <View style={styles.orContainer}>
+                <View style={styles.line} />
+                <Text style={styles.orText}>O inicia mediante:</Text>
+                <View style={styles.line} />
+            </View>
+
+            {/* Opciones de inicio de sesión con redes sociales */}
+            <View style={styles.socialButtonsContainer}>
+                <TouchableOpacity style={styles.socialButton} onPress={handleGoogleLogin}>
+                    <Icon name="google" size={28} color="#DB4437" />
+                </TouchableOpacity>
+
+                {Platform.OS === 'ios' && ( // Solo muestra este botón en iOS
+                    <TouchableOpacity style={styles.socialButton} onPress={handleAppleLogin}>
+                        <Icon name="apple" size={28} color="#000" />
+                    </TouchableOpacity>
+                )}
+            </View>
+
             {/* Link a Sign Up */}
-            <Link href="/signup" style={styles.switchLink}> {/* Asegúrate de que la ruta '/signup' es correcta */}
+            <Link href="/signup" style={styles.switchLink}>
                 <Text style={styles.switchText}>¿No tienes cuenta? Regístrate</Text>
             </Link>
         </View>
@@ -166,6 +195,38 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 18,
         fontWeight: 'bold',
+    },
+    // --- ESTILOS PARA EL SEPARADOR Y BOTONES SOCIALES ---
+    orContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 30, // Espacio superior desde el botón de login
+        marginBottom: 10, // Espacio inferior antes de los botones sociales
+        width: '100%',
+    },
+    line: {
+        flex: 1,
+        height: 1, // Grosor de la línea
+        backgroundColor: '#444', // Color de la línea
+        marginHorizontal: 10, // Espacio entre la línea y el texto
+    },
+    orText: {
+        color: '#aaa',
+        fontSize: 14,
+    },
+    socialButtonsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center', // Centra los botones horizontalmente
+        marginTop: 10, // Espacio superior desde el separador "O"
+    },
+    socialButton: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#fff', // Fondo blanco para los botones
+        borderRadius: 10,
+        width: 50,  // Ancho fijo para el botón
+        height: 50, // Alto fijo para el botón
+        marginHorizontal: 8, // Margen entre los botones
     },
     switchLink: {
         marginTop: 20,

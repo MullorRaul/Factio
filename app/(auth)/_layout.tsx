@@ -40,6 +40,7 @@ export default function AuthLayout() {
         si las tienes en esta carpeta (ej: reset-password.tsx).
         <Stack.Screen name="reset-password" options={{ headerShown: false }} />
       */}
+            <Stack.Screen name="pantallaInicio" options={{ headerShown: false }} />
         </Stack>
     );
 }

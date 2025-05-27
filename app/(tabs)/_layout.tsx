@@ -1,6 +1,6 @@
 // app/(tabs)/_layout.tsx (Layout del grupo de pestañas)
 // Este archivo define el navegador de pestañas para las rutas dentro de la carpeta (tabs).
-import { Tabs } from 'expo-router';
+import {Stack, Tabs} from 'expo-router';
 import React from 'react'; // Removed useState and useEffect
 import { TabBarIcon } from '@/components/navigation/TabBarIcon';
 import { Colors } from '@/constants/Colors';
@@ -66,7 +66,7 @@ export default function TabLayout() {
                     ),
                 }}
             />
-
+            <Stack.Screen name="login" options={{ headerShown: false }} />
             {/* Pestaña de Mapa */}
             {/* Corresponde al archivo map.tsx dentro de (tabs) */}
             <Tabs.Screen
