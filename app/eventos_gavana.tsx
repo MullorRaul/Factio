@@ -19,8 +19,8 @@ interface Event {
     description: string;
     day: 'Jueves' | 'Viernes' | 'Sábado' | 'Domingo';
     photo: any; // Assuming you'd have specific images for Gavana events
-    time?: string;
-    entryPrice?: string;
+    // time?: string; // Removed
+    // entryPrice?: string; // Removed
 }
 
 const DELIRIUM_EVENTS: Event[] = [
@@ -30,8 +30,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'La noche universitaria más potente con sets de techno underground y minimal. ¡Ofertas en copas para estudiantes toda la noche!',
         day: 'Jueves',
         photo: require('../assets/images/delirium.jpg'), // Placeholder, replace with Gavana image
-        time: '23:00h - 04:00h',
-        entryPrice: 'Gratis con carné universitario / 10€ sin carné (incluye consumición)',
+        // time: '23:00h - 04:00h', // Removed
+        // entryPrice: 'Gratis con carné universitario / 10€ sin carné (incluye consumición)', // Removed
     },
     {
         id: 'gav-vie-1',
@@ -39,8 +39,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'Un viaje eufórico a través de los sonidos del trance melódico y progressive house. Eleva tus sentidos con visuales envolventes.',
         day: 'Viernes',
         photo: require('../assets/images/delirium.jpg'),
-        time: '23:30h - 06:00h',
-        entryPrice: '15€ con 1 consumición',
+        // time: '23:30h - 06:00h', // Removed
+        // entryPrice: '15€ con 1 consumición', // Removed
     },
     {
         id: 'gav-vie-2',
@@ -48,8 +48,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'Sumérgete en la oscuridad con los ritmos contundentes del acid y el techno industrial. Solo para los más atrevidos.',
         day: 'Viernes',
         photo: require('../assets/images/delirium.jpg'),
-        time: '01:00h - 07:00h',
-        entryPrice: '20€ con 1 consumición',
+        // time: '01:00h - 07:00h', // Removed
+        // entryPrice: '20€ con 1 consumición', // Removed
     },
     {
         id: 'gav-sab-1',
@@ -57,8 +57,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'La noche cumbre de Gavana con los DJs más explosivos y los himnos del EDM y Big Room que te harán vibrar. ¡Show de luces y CO2 garantizado!',
         day: 'Sábado',
         photo: require('../assets/images/delirium.jpg'),
-        time: '00:00h - 07:00h',
-        entryPrice: '25€ con 2 consumiciones',
+        // time: '00:00h - 07:00h', // Removed
+        // entryPrice: '25€ con 2 consumiciones', // Removed
     },
     {
         id: 'gav-sab-2',
@@ -66,8 +66,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'Explora las profundidades del minimal y el deep tech con una selección exquisita de artistas locales e invitados. Un ambiente más íntimo y sofisticado.',
         day: 'Sábado',
         photo: require('../assets/images/delirium.jpg'),
-        time: '01:30h - 06:00h',
-        entryPrice: 'Incluido con la entrada general',
+        // time: '01:30h - 06:00h', // Removed
+        // entryPrice: 'Incluido con la entrada general', // Removed
     },
     {
         id: 'gav-dom-1',
@@ -75,8 +75,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'Termina el fin de semana con una sesión relajada de downtempo y ambient electrónico. Perfecta para conversar y disfrutar de los últimos beats.',
         day: 'Domingo',
         photo: require('../assets/images/delirium.jpg'),
-        time: '22:00h - 03:00h',
-        entryPrice: '10€ con 1 consumición',
+        // time: '22:00h - 03:00h', // Removed
+        // entryPrice: '10€ con 1 consumición', // Removed
     },
     {
         id: 'gav-dom-2',
@@ -84,8 +84,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'Un viaje nostálgico a los orígenes del house con los clásicos que marcaron una era. La forma perfecta de despedir el fin de semana.',
         day: 'Domingo',
         photo: require('../assets/images/delirium.jpg'),
-        time: '00:00h - 04:00h',
-        entryPrice: 'Gratis para los que lleguen antes de la 1:00h',
+        // time: '00:00h - 04:00h', // Removed
+        // entryPrice: 'Gratis para los que lleguen antes de la 1:00h', // Removed
     },
 ];
 
@@ -135,16 +135,8 @@ export default function EventosDeliriumScreen() {
                                     <View key={event.id} style={styles.eventCard}>
                                         <View style={styles.eventInfo}>
                                             <Text style={styles.eventName}>{event.name}</Text>
-                                            {event.time && (
-                                                <Text style={styles.eventDetail}>
-                                                    Hora: {event.time}
-                                                </Text>
-                                            )}
-                                            {event.entryPrice && (
-                                                <Text style={styles.eventDetail}>
-                                                    Entrada: {event.entryPrice}
-                                                </Text>
-                                            )}
+                                            {/* Removed conditional rendering for event.time */}
+                                            {/* Removed conditional rendering for event.entryPrice */}
                                             <Text style={styles.eventDescription}>{event.description}</Text>
 
                                             <View style={styles.buttonRow}>
@@ -223,6 +215,7 @@ const styles = StyleSheet.create({
         color: '#fff',
         marginBottom: 5,
     },
+    // eventDetail style is now unused but kept for reference
     eventDetail: {
         fontSize: 14,
         color: '#aaa',

@@ -3,6 +3,13 @@ import 'react-native-gesture-handler';          // 👈 debe ir lo primero
 import React from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Stack } from 'expo-router';
+import {LogBox} from "react-native";
+
+// Recommended: Hide specific warnings
+LogBox.ignoreLogs([
+    'Warning: Text strings must be rendered within a <Text> component.',
+    // Add other specific warning messages you want to ignore here
+]);
 
 export default function RootLayout() {
     return (

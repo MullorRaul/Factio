@@ -7,6 +7,7 @@ const multer = require('multer'); // Importar multer
 const app = express();
 const port = 3001;
 
+
 // --- Configuración de Base de Datos y Supabase ---
 // Asegúrate de que db.js exporta 'supabase' (cliente Supabase) y 'pool' (pool de pg)
 // NECESITAS TENER LA LIBRERÍA 'pg' INSTALADA (npm install pg)

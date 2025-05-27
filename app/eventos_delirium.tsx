@@ -19,8 +19,8 @@ interface Event {
     description: string;
     day: 'Jueves' | 'Viernes' | 'Sábado' | 'Domingo';
     photo: any; // Assuming you'd have specific images for Delirium events
-    time?: string;
-    entryPrice?: string;
+    // time?: string; // Removed
+    // entryPrice?: string; // Removed
 }
 
 const DELIRIUM_EVENTS: Event[] = [
@@ -30,8 +30,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'Una noche íntima para nuevos talentos y amantes de la música indie, folk y acústica. Trae tu instrumento o simplemente disfruta.',
         day: 'Jueves',
         photo: require('../assets/images/delirium.jpg'),
-        time: '21:00h',
-        entryPrice: 'Gratis',
+        // time: '21:00h', // Removed
+        // entryPrice: 'Gratis', // Removed
     },
     {
         id: 'del-vie-1',
@@ -39,8 +39,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'Bandas locales y nacionales que te harán vibrar con los mejores temas de rock alternativo, post-punk y grunge.',
         day: 'Viernes',
         photo: require('../assets/images/delirium.jpg'),
-        time: '22:30h',
-        entryPrice: '5€ con consumición',
+        // time: '22:30h', // Removed
+        // entryPrice: '5€ con consumición', // Removed
     },
     {
         id: 'del-vie-2',
@@ -48,8 +48,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'DJ set que te transportará a los 80s y 90s con la mejor selección de new wave, synth pop y gothic rock.',
         day: 'Viernes',
         photo: require('../assets/images/delirium.jpg'),
-        time: '00:30h',
-        entryPrice: 'Gratis',
+        // time: '00:30h', // Removed
+        // entryPrice: 'Gratis', // Removed
     },
     {
         id: 'del-sab-1',
@@ -57,8 +57,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'Adéntrate en los sonidos más oscuros del dark electro, industrial y EBM. ¡Vístete para la ocasión!',
         day: 'Sábado',
         photo: require('../assets/images/delirium.jpg'),
-        time: '23:00h',
-        entryPrice: 'Gratis',
+        // time: '23:00h', // Removed
+        // entryPrice: 'Gratis', // Removed
     },
     {
         id: 'del-sab-2',
@@ -66,8 +66,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'La banda más potente de la semana sube al escenario para una descarga de punk rock y hardcore que no te dejará indiferente.',
         day: 'Sábado',
         photo: require('../assets/images/delirium.jpg'),
-        time: '01:00h',
-        entryPrice: '8€',
+        // time: '01:00h', // Removed
+        // entryPrice: '8€', // Removed
     },
     {
         id: 'del-dom-1',
@@ -75,8 +75,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'Relaja el cuerpo y el alma con la mejor música blues en vivo y nuestra exclusiva selección de cervezas artesanales.',
         day: 'Domingo',
         photo: require('../assets/images/delirium.jpg'),
-        time: '20:00h',
-        entryPrice: 'Gratis',
+        // time: '20:00h', // Removed
+        // entryPrice: 'Gratis', // Removed
     },
     {
         id: 'del-dom-2',
@@ -84,8 +84,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'Una selección de cortometrajes independientes y de culto, acompañados de debate y buen ambiente.',
         day: 'Domingo',
         photo: require('../assets/images/delirium.jpg'),
-        time: '22:00h',
-        entryPrice: 'Gratis',
+        // time: '22:00h', // Removed
+        // entryPrice: 'Gratis', // Removed
     },
 ];
 
@@ -135,16 +135,8 @@ export default function EventosDeliriumScreen() {
                                     <View key={event.id} style={styles.eventCard}>
                                         <View style={styles.eventInfo}>
                                             <Text style={styles.eventName}>{event.name}</Text>
-                                            {event.time && (
-                                                <Text style={styles.eventDetail}>
-                                                    Hora: {event.time}
-                                                </Text>
-                                            )}
-                                            {event.entryPrice && (
-                                                <Text style={styles.eventDetail}>
-                                                    Entrada: {event.entryPrice}
-                                                </Text>
-                                            )}
+                                            {/* Removed time display */}
+                                            {/* Removed entryPrice display */}
                                             <Text style={styles.eventDescription}>{event.description}</Text>
 
                                             <View style={styles.buttonRow}>
@@ -223,7 +215,7 @@ const styles = StyleSheet.create({
         color: '#fff',
         marginBottom: 5,
     },
-    eventDetail: {
+    eventDetail: { // This style is now unused but kept for reference if needed
         fontSize: 14,
         color: '#aaa',
         marginBottom: 3,

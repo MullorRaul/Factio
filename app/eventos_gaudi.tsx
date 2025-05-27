@@ -19,8 +19,8 @@ interface Event {
     description: string;
     day: 'Jueves' | 'Viernes' | 'Sábado' | 'Domingo';
     photo: any;
-    time?: string;
-    entryPrice?: string;
+    // time?: string; // Removed
+    // entryPrice?: string; // Removed
 }
 
 const DELIRIUM_EVENTS: Event[] = [
@@ -30,8 +30,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'La fiesta perfecta para estudiantes con los mejores éxitos latinos y reggaeton. ¡Ofertas especiales en copas!',
         day: 'Jueves',
         photo: require('../assets/images/delirium.jpg'), // Assuming you'd change this to a Gaudi-specific image
-        time: '23:00h - 04:00h',
-        entryPrice: 'Gratis hasta la 1:00h (con carné universitario)',
+        // time: '23:00h - 04:00h', // Removed
+        // entryPrice: 'Gratis hasta la 1:00h (con carné universitario)', // Removed
     },
     {
         id: 'g-jue-2',
@@ -39,8 +39,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'Revive los clásicos del dance, pop y rock de los 90s y 2000s. ¡Una noche de pura nostalgia!',
         day: 'Jueves',
         photo: require('../assets/images/delirium.jpg'),
-        time: '00:00h - 05:00h',
-        entryPrice: '8€ con consumición',
+        // time: '00:00h - 05:00h', // Removed
+        // entryPrice: '8€ con consumición', // Removed
     },
     {
         id: 'g-vie-1',
@@ -48,8 +48,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'Line-up de DJs residentes y artistas invitados con lo último en tech house y deep house.',
         day: 'Viernes',
         photo: require('../assets/images/delirium.jpg'),
-        time: '23:30h - 06:00h',
-        entryPrice: '15€ con 1 copa',
+        // time: '23:30h - 06:00h', // Removed
+        // entryPrice: '15€ con 1 copa', // Removed
     },
     {
         id: 'g-vie-2',
@@ -57,8 +57,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'Todos los éxitos actuales del pop, hip-hop y R&B que no podrás parar de bailar.',
         day: 'Viernes',
         photo: require('../assets/images/delirium.jpg'),
-        time: '00:00h - 06:00h',
-        entryPrice: '10€ con consumición',
+        // time: '00:00h - 06:00h', // Removed
+        // entryPrice: '10€ con consumición', // Removed
     },
     {
         id: 'g-sab-1',
@@ -66,8 +66,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'Los DJs más importantes de Gaudi pinchan los himnos del club que te harán vibrar hasta el amanecer.',
         day: 'Sábado',
         photo: require('../assets/images/delirium.jpg'),
-        time: '00:00h - 07:00h',
-        entryPrice: '20€ con 2 copas',
+        // time: '00:00h - 07:00h', // Removed
+        // entryPrice: '20€ con 2 copas', // Removed
     },
     {
         id: 'g-sab-2',
@@ -75,8 +75,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'La mejor selección de ritmos urbanos, desde hip-hop clásico a los últimos éxitos de R&B.',
         day: 'Sábado',
         photo: require('../assets/images/delirium.jpg'),
-        time: '01:00h - 06:00h',
-        entryPrice: '12€ con consumición',
+        // time: '01:00h - 06:00h', // Removed
+        // entryPrice: '12€ con consumición', // Removed
     },
     {
         id: 'g-dom-1',
@@ -84,8 +84,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'Cierra la semana con una sesión más relajada de deep house y soulful grooves. Perfecto para la última copa.',
         day: 'Domingo',
         photo: require('../assets/images/delirium.jpg'),
-        time: '22:00h - 03:00h',
-        entryPrice: 'Gratis',
+        // time: '22:00h - 03:00h', // Removed
+        // entryPrice: 'Gratis', // Removed
     },
     {
         id: 'g-dom-2',
@@ -93,8 +93,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'Cada domingo, una nueva sorpresa: desde máscaras a fluorescencia. ¡Ven y descúbrelo!',
         day: 'Domingo',
         photo: require('../assets/images/delirium.jpg'),
-        time: '23:00h - 04:00h',
-        entryPrice: '5€',
+        // time: '23:00h - 04:00h', // Removed
+        // entryPrice: '5€', // Removed
     },
 ];
 
@@ -145,16 +145,8 @@ export default function EventosDeliriumScreen() {
                                     <View key={event.id} style={styles.eventCard}>
                                         <View style={styles.eventInfo}>
                                             <Text style={styles.eventName}>{event.name}</Text>
-                                            {event.time && (
-                                                <Text style={styles.eventDetail}>
-                                                    Hora: {event.time}
-                                                </Text>
-                                            )}
-                                            {event.entryPrice && (
-                                                <Text style={styles.eventDetail}>
-                                                    Entrada: {event.entryPrice}
-                                                </Text>
-                                            )}
+                                            {/* Removed conditional rendering for event.time */}
+                                            {/* Removed conditional rendering for event.entryPrice */}
                                             <Text style={styles.eventDescription}>{event.description}</Text>
 
                                             <View style={styles.buttonRow}>
@@ -233,6 +225,7 @@ const styles = StyleSheet.create({
         color: '#fff',
         marginBottom: 5,
     },
+    // eventDetail style is now unused but kept for reference
     eventDetail: {
         fontSize: 14,
         color: '#aaa',

@@ -2,6 +2,13 @@
 // Este archivo define el navegador para las rutas dentro de la carpeta (auth).
 import { Stack } from 'expo-router';
 import React from 'react';
+import {LogBox} from "react-native";
+
+// Recommended: Hide specific warnings
+LogBox.ignoreLogs([
+    'Warning: Text strings must be rendered within a <Text> component.',
+    // Add other specific warning messages you want to ignore here
+]);
 
 // Este es el componente del layout para el grupo (auth).
 // Generalmente se usa un Stack navigator aquí para manejar la navegación

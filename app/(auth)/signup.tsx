@@ -2,14 +2,14 @@
 import React, { useState } from 'react';
 import {
     View, Text, TextInput, TouchableOpacity,
-    StyleSheet, StatusBar, Alert, ActivityIndicator, ScrollView, Image, Platform
+    StyleSheet, StatusBar, Alert, ActivityIndicator, ScrollView, Platform
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
-// import { Picker } from '@react-native-picker/picker'; // Si usas Picker, asegúrate de que está instalado y se usa correctamente
-// Reemplazado Picker por botones de selección manual para mejor UI en móvil
+// ImagePicker and Image imports are no longer needed
+// import * as ImagePicker from 'expo-image-picker';
+// import { Image } from 'react-native';
 
 // Define la URL base de tu backend
 // ¡CAMBIA ESTO POR LA URL DE TU SERVIDOR DE PRODUCCIÓN CUANDO DESPLIEGUES!
@@ -27,9 +27,7 @@ export default function SignUpScreen() {
     const [estudiosTrabajo, setEstudiosTrabajo] = useState('');
     const [orientacionSexual, setOrientacionSexual] = useState<string | null>(null); // Usamos null
 
-    // Estados para las fotos
-    const [foto1Uri, setFoto1Uri] = useState<string | null>(null);
-    const [foto2Uri, setFoto2Uri] = useState<string | null>(null);
+    // Estados para las fotos - ELIMINADOS
 
     const [isLoading, setIsLoading] = useState(false); // Estado para indicador de carga
 
@@ -38,25 +36,10 @@ export default function SignUpScreen() {
     const orientacionOptions = ['heterosexual', 'homosexual', 'bisexual', 'otro'];
 
 
-    const pickImage = async (setUri: React.Dispatch<React.SetStateAction<string | null>>) => {
-        // Solicitar permisos de la galería
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-            Alert.alert('Permiso denegado', 'Necesitamos permiso para acceder a tu galería de fotos.');
-            return;
-        }
-
-        let result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [4, 3], // O el aspecto que prefieras
-            quality: 0.5, // Reducir calidad para subir más rápido
-        });
-
-        if (!result.canceled && result.assets && result.assets.length > 0) {
-            setUri(result.assets[0].uri); // Usar la URI del asset seleccionado
-        }
-    };
+    // La función pickImage ha sido eliminada ya que no se necesitan fotos
+    // const pickImage = async (setUri: React.Dispatch<React.SetStateAction<string | null>>) => {
+    //     // ... (código de pickImage eliminado)
+    // };
 
     const handleSignUp = async () => {
         setIsLoading(true); // Iniciar indicador de carga
@@ -74,13 +57,7 @@ export default function SignUpScreen() {
             return;
         }
 
-        // Validar que al menos una foto fue seleccionada (si es obligatorio)
-        // if (!foto1Uri && !foto2Uri) {
-        //     Alert.alert('Fotos requeridas', 'Debes subir al menos una foto.');
-        //     setIsLoading(false);
-        //     return;
-        // }
-
+        // Validación de fotos eliminada ya que no se suben fotos.
 
         const formData = new FormData();
         formData.append('email', email.trim());
@@ -109,35 +86,12 @@ export default function SignUpScreen() {
             formData.append('orientacion_sexual', orientacionSexual.toLowerCase()); // Enviar en minúsculas
         }
 
-        // Añadir archivos de fotos si existen
-        // Formato para subir archivos con fetch y FormData en React Native
-        // https://github.com/facebook/react-native/issues/11725
-        if (foto1Uri) {
-            const uriParts = foto1Uri.split('.');
-            const fileType = uriParts[uriParts.length - 1];
-            formData.append('foto1', {
-                uri: foto1Uri,
-                name: `foto1_${Date.now()}.${fileType}`,
-                type: `image/${fileType}`, // O usar 'image/jpeg', 'image/png' etc.
-            } as any); // 'as any' a veces es necesario para el tipo de archivo en FormData
-        }
-
-        if (foto2Uri) {
-            const uriParts = foto2Uri.split('.');
-            const fileType = uriParts[uriParts.length - 1];
-            formData.append('foto2', {
-                uri: foto2Uri,
-                name: `foto2_${Date.now()}.${fileType}`,
-                type: `image/${fileType}`,
-            } as any);
-        }
+        // La lógica para añadir fotos al FormData ha sido eliminada
 
 
         try {
             const response = await fetch(`${API_BASE_URL}/usuarios/signup`, {
                 method: 'POST',
-                // NO establecer Content-Type: 'multipart/form-data'. Fetch lo hace automáticamente con FormData.
-                // headers: { 'Content-Type': 'multipart/form-data' }, // <-- ¡NO HACER ESTO!
                 body: formData, // Envía el FormData
             });
 
@@ -164,7 +118,7 @@ export default function SignUpScreen() {
 
     return (
         <ScrollView contentContainerStyle={styles.container}>
-            <StatusBar style="light" />
+            <StatusBar barStyle="light-content" /> {/* Usar barStyle en lugar de style */}
             <Text style={styles.title}>Regístrate</Text>
 
             {/* Campos de texto requeridos */}
@@ -215,39 +169,37 @@ export default function SignUpScreen() {
             </View>
 
             <Text style={styles.label}>Orientación Sexual</Text>
-            <View style={styles.selectionContainer}>
-                {orientacionOptions.map(option => (
-                    <TouchableOpacity
-                        key={option}
-                        style={[styles.selectionButton, orientacionSexual === option && styles.selectionButtonSelected]}
-                        onPress={() => setOrientacionSexual(orientacionSexual === option ? null : option)} // Toggle selection
-                    >
-                        <Text style={[styles.selectionButtonText, orientacionSexual === option && styles.selectionButtonTextSelected]}>
-                            {option.charAt(0).toUpperCase() + option.slice(1)} {/* Capitalizar para mostrar */}
-                        </Text>
-                    </TouchableOpacity>
-                ))}
+            <View style={styles.orientationRowsContainer}> {/* Nuevo contenedor para las filas */}
+                <View style={styles.selectionRow}>
+                    {orientacionOptions.slice(0, 2).map(option => ( // Primera fila: 2 elementos
+                        <TouchableOpacity
+                            key={option}
+                            style={[styles.selectionButton, orientacionSexual === option && styles.selectionButtonSelected]}
+                            onPress={() => setOrientacionSexual(orientacionSexual === option ? null : option)}
+                        >
+                            <Text style={[styles.selectionButtonText, orientacionSexual === option && styles.selectionButtonTextSelected]}>
+                                {option.charAt(0).toUpperCase() + option.slice(1)}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+                <View style={styles.selectionRow}>
+                    {orientacionOptions.slice(2, 4).map(option => ( // Segunda fila: 2 elementos
+                        <TouchableOpacity
+                            key={option}
+                            style={[styles.selectionButton, orientacionSexual === option && styles.selectionButtonSelected]}
+                            onPress={() => setOrientacionSexual(orientacionSexual === option ? null : option)}
+                        >
+                            <Text style={[styles.selectionButtonText, orientacionSexual === option && styles.selectionButtonTextSelected]}>
+                                {option.charAt(0).toUpperCase() + option.slice(1)}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
             </View>
 
 
-            {/* Carga de Fotos */}
-            <Text style={styles.label}>Fotos (Opcional)</Text>
-            <View style={styles.photoUploadContainer}>
-                <View style={styles.photoInputGroup}>
-                    <TouchableOpacity style={styles.photoButton} onPress={() => pickImage(setFoto1Uri)}>
-                        <Icon name="camera-outline" size={30} color="#aaa" />
-                        <Text style={styles.selectionButtonText}>Foto 1</Text>
-                    </TouchableOpacity>
-                    {foto1Uri && <Image source={{ uri: foto1Uri }} style={styles.photoPreview} />}
-                </View>
-                <View style={styles.photoInputGroup}>
-                    <TouchableOpacity style={styles.photoButton} onPress={() => pickImage(setFoto2Uri)}>
-                        <Icon name="camera-outline" size={30} color="#aaa" />
-                        <Text style={styles.selectionButtonText}>Foto 2</Text>
-                    </TouchableOpacity>
-                    {foto2Uri && <Image source={{ uri: foto2Uri }} style={styles.photoPreview} />}
-                </View>
-            </View>
+            {/* Carga de Fotos - SE HA ELIMINADO COMPLETAMENTE */}
 
 
             {/* Botón de Registro */}
@@ -351,33 +303,47 @@ const styles = StyleSheet.create({
     selectionButtonTextSelected: {
         color: '#fff',
     },
-    // Estilos de Carga de Fotos
-    photoUploadContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
+    // NUEVOS Estilos para Orientación Sexual en dos filas
+    orientationRowsContainer: {
         width: '100%',
-        marginTop: 15,
-        marginBottom: 10,
-    },
-    photoInputGroup: {
-        alignItems: 'center',
-        flex: 1, // Ocupa el espacio disponible
-        marginHorizontal: 5,
-    },
-    photoButton: {
+        marginTop: 8,
+        padding: 5, // Padding similar al selectionContainer para mantener consistencia
         backgroundColor: '#1e1e1e',
         borderRadius: 10,
-        padding: 15,
+    },
+    selectionRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
         alignItems: 'center',
-        justifyContent: 'center',
-        width: '80%', // Ancho del botón
-        aspectRatio: 1, // Hacerlo cuadrado
+        marginBottom: 5, // Espacio entre filas
     },
-    photoPreview: {
-        width: '80%', // Ancho de la previsualización
-        aspectRatio: 1, // Hacerlo cuadrado
-        borderRadius: 10,
-        marginTop: 10,
-        resizeMode: 'cover',
-    },
+    // Estilos de Carga de Fotos - ELIMINADOS
+    // photoUploadContainer: {
+    //     flexDirection: 'row',
+    //     justifyContent: 'space-around',
+    //     width: '100%',
+    //     marginTop: 15,
+    //     marginBottom: 10,
+    // },
+    // photoInputGroup: {
+    //     alignItems: 'center',
+    //     flex: 1,
+    //     marginHorizontal: 5,
+    // },
+    // photoButton: {
+    //     backgroundColor: '#1e1e1e',
+    //     borderRadius: 10,
+    //     padding: 15,
+    //     alignItems: 'center',
+    //     justifyContent: 'center',
+    //     width: '80%',
+    //     aspectRatio: 1,
+    // },
+    // photoPreview: {
+    //     width: '80%',
+    //     aspectRatio: 1,
+    //     borderRadius: 10,
+    //     marginTop: 10,
+    //     resizeMode: 'cover',
+    // },
 });

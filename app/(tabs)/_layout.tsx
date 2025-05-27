@@ -5,8 +5,15 @@ import React from 'react'; // Removed useState and useEffect
 import { TabBarIcon } from '@/components/navigation/TabBarIcon';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+
+// Recommended: Hide specific warnings
+LogBox.ignoreLogs([
+    'Warning: Text strings must be rendered within a <Text> component.',
+    // Add other specific warning messages you want to ignore here
+]);
 // Removed Image, View, ActivityIndicator, StyleSheet imports
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Keep AsyncStorage for constants
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {LogBox} from "react-native"; // Keep AsyncStorage for constants
 
 // Define la URL base de tu backend (Still needed for other potential uses or just as a constant)
 // ¡CAMBIA ESTO POR LA URL DE TU SERVIDOR DE PRODUCCIÓN CUANDO DESPLIEGUES!

@@ -19,8 +19,8 @@ interface Event {
     description: string;
     day: 'Jueves' | 'Viernes' | 'Sábado' | 'Domingo';
     photo: any; // Assuming you'd have specific images for Don Vito events
-    time?: string;
-    entryPrice?: string;
+    // time?: string; // Removed
+    // entryPrice?: string; // Removed
 }
 
 const DELIRIUM_EVENTS: Event[] = [
@@ -30,8 +30,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'La noche donde las mujeres son las protagonistas. Reggaeton, dembow y hip-hop. ¡Copas gratis para ellas hasta la 1:00h!',
         day: 'Jueves',
         photo: require('../assets/images/delirium.jpg'), // Placeholder, replace with Don Vito image
-        time: '23:00h - 04:00h',
-        entryPrice: 'Gratis chicas hasta 1:00h / 15€ chicos con copa',
+        // time: '23:00h - 04:00h', // Removed
+        // entryPrice: 'Gratis chicas hasta 1:00h / 15€ chicos con copa', // Removed
     },
     {
         id: 'dv-vie-1',
@@ -39,8 +39,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'Una noche para sentir el fuego latino. Salsa, bachata, merengue y una mezcla picante de reggaeton clásico. ¡Clases de baile a las 23:30h!',
         day: 'Viernes',
         photo: require('../assets/images/delirium.jpg'),
-        time: '22:00h - 05:00h',
-        entryPrice: '15€ con copa',
+        // time: '22:00h - 05:00h', // Removed
+        // entryPrice: '15€ con copa', // Removed
     },
     {
         id: 'dv-vie-2',
@@ -48,8 +48,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'Cuando las luces bajan, la música se pone seria. Deep house y tech house con toques sensuales hasta el amanecer.',
         day: 'Viernes',
         photo: require('../assets/images/delirium.jpg'),
-        time: '01:00h - 06:00h',
-        entryPrice: '20€ con copa',
+        // time: '01:00h - 06:00h', // Removed
+        // entryPrice: '20€ con copa', // Removed
     },
     {
         id: 'dv-sab-1',
@@ -57,8 +57,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'La noche más exclusiva. House comercial, R&B y los hits más sofisticados para una clientela selecta. Reservas de mesas disponibles.',
         day: 'Sábado',
         photo: require('../assets/images/delirium.jpg'),
-        time: '23:30h - 07:00h',
-        entryPrice: '25€ con 2 copas (entrada anticipada)',
+        // time: '23:30h - 07:00h', // Removed
+        // entryPrice: '25€ con 2 copas (entrada anticipada)', // Removed
     },
     {
         id: 'dv-sab-2',
@@ -66,8 +66,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'Déjate seducir por un show de burlesque y cabaret en vivo que encenderá la noche. Actuaciones cada hora.',
         day: 'Sábado',
         photo: require('../assets/images/delirium.jpg'),
-        time: '00:30h - 02:30h',
-        entryPrice: 'Incluido con la entrada general',
+        // time: '00:30h - 02:30h', // Removed
+        // entryPrice: 'Incluido con la entrada general', // Removed
     },
     {
         id: 'dv-dom-1',
@@ -75,8 +75,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'Busca tu match en un ambiente divertido y sin presiones. Sesiones de speed dating seguidas de una fiesta para socializar.',
         day: 'Domingo',
         photo: require('../assets/images/delirium.jpg'),
-        time: '21:00h (speed dating) - 03:00h (fiesta)',
-        entryPrice: '10€ (incluye participación y 1 copa)',
+        // time: '21:00h (speed dating) - 03:00h (fiesta)', // Removed
+        // entryPrice: '10€ (incluye participación y 1 copa)', // Removed
     },
     {
         id: 'dv-dom-2',
@@ -84,8 +84,8 @@ const DELIRIUM_EVENTS: Event[] = [
         description: 'Termina la semana con elegancia. Ritmos sensuales de R&B y neo-soul que invitan a la conversación y el coqueteo.',
         day: 'Domingo',
         photo: require('../assets/images/delirium.jpg'),
-        time: '23:00h - 04:00h',
-        entryPrice: '10€ con consumición',
+        // time: '23:00h - 04:00h', // Removed
+        // entryPrice: '10€ con consumición', // Removed
     },
 ];
 
@@ -137,16 +137,8 @@ export default function EventosDeliriumScreen() {
                                     <View key={event.id} style={styles.eventCard}>
                                         <View style={styles.eventInfo}>
                                             <Text style={styles.eventName}>{event.name}</Text>
-                                            {event.time && (
-                                                <Text style={styles.eventDetail}>
-                                                    Hora: {event.time}
-                                                </Text>
-                                            )}
-                                            {event.entryPrice && (
-                                                <Text style={styles.eventDetail}>
-                                                    Entrada: {event.entryPrice}
-                                                </Text>
-                                            )}
+                                            {/* Conditionally rendered time was here, now removed */}
+                                            {/* Conditionally rendered entryPrice was here, now removed */}
                                             <Text style={styles.eventDescription}>{event.description}</Text>
 
                                             <View style={styles.buttonRow}>
@@ -225,7 +217,7 @@ const styles = StyleSheet.create({
         color: '#fff',
         marginBottom: 5,
     },
-    eventDetail: {
+    eventDetail: { // This style is now unused but kept for reference if needed
         fontSize: 14,
         color: '#aaa',
         marginBottom: 3,
