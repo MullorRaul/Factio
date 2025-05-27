@@ -20,7 +20,8 @@ export default [
         image: require('../assets/images/delirium.jpg'),
         weight: 100,
         mapUrl: 'https://maps.app.goo.gl/G5UHV9QJKM9TAuGB6',
-        eventPageName: 'eventos_delirium' // <-- ¡QUITAR LA BARRA INICIAL!
+        eventPageName: 'eventos_delirium', // <-- ¡QUITAR LA BARRA INICIAL!
+        category: 'Pub',
     },
     {
         id: 4,
@@ -32,7 +33,8 @@ export default [
         image: require('../assets/images/Gaudi.jpg'),
         weight: 110,
         mapUrl: 'https://maps.app.goo.gl/x3yfT3GvVDswSWhZ6',
-        eventPageName: 'eventos_gaudi' // <-- ¡QUITAR LA BARRA INICIAL!
+        eventPageName: 'eventos_gaudi',// <-- ¡QUITAR LA BARRA INICIAL!
+        category: 'Discoteca',
     },
     {
         id: 5,
@@ -44,7 +46,8 @@ export default [
         image: require('../assets/images/gavana.png'),
         weight: 40,
         mapUrl: 'https://maps.app.goo.gl/g8cbx8Wqa9UpF9cd9',
-        eventPageName: 'eventos_gavana' // <-- ¡QUITAR LA BARRA INICIAL!
+        eventPageName: 'eventos_gavana', // <-- ¡QUITAR LA BARRA INICIAL!
+        category: 'Discoteca',
 
     },
     {
@@ -57,7 +60,8 @@ export default [
         image: require('../assets/images/don_vito.jpeg'),
         weight: 50,
         mapUrl: 'https://maps.app.goo.gl/Nc6A5pHyYEbqLqA2A',
-        eventPageName: 'eventos_don_vito' // <-- ¡QUITAR LA BARRA INICIAL!
+        eventPageName: 'eventos_don_vito', // <-- ¡QUITAR LA BARRA INICIAL!
+        category: 'Discoteca',
     },
     {
         id: 7,
@@ -69,6 +73,7 @@ export default [
         image: require('../assets/images/cafeteriaEpsa.png'),
         weight: 20,
         mapUrl: 'https://maps.app.goo.gl/yEd21tHgLvnV2AKi7',
-        eventPageName: 'eventos_epsa' // <-- ¡QUITAR LA BARRA INICIAL!
+        eventPageName: 'eventos_epsa', // <-- ¡QUITAR LA BARRA INICIAL!
+        category: 'Cafeteria',
     }
 ];

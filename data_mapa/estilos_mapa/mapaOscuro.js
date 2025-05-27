@@ -1,3 +1,16 @@
+const color = "#574d5f"
+//Opciones de color
+/*
+6a5f74
+574d5f
+654e6d
+87638c
+a696ad
+73597e
+-----
+370f53
+* */
+
 export default  [
     {
         "featureType": "all",
@@ -94,7 +107,7 @@ export default  [
         "elementType": "geometry.fill",
         "stylers": [
             {
-                "color": "#000000"
+                "color": color
             },
             {
                 "lightness": 17
@@ -106,7 +119,8 @@ export default  [
         "elementType": "geometry.stroke",
         "stylers": [
             {
-                "color": "#000000"
+                "color": color
+
             },
             {
                 "lightness": 29
@@ -121,7 +135,7 @@ export default  [
         "elementType": "geometry",
         "stylers": [
             {
-                "color": "#000000"
+                "color": color
             },
             {
                 "lightness": 18
@@ -133,7 +147,7 @@ export default  [
         "elementType": "geometry",
         "stylers": [
             {
-                "color": "#000000"
+                "color": color
             },
             {
                 "lightness": 16

@@ -2,8 +2,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
     View, StyleSheet, Dimensions, TextInput, Text,
-    TouchableOpacity, FlatList, Image, ActivityIndicator,
-    Animated, Easing, Linking, KeyboardAvoidingView, Platform,
+    TouchableOpacity, FlatList, Image, ActivityIndicator, Animated,
+    Easing, Linking, KeyboardAvoidingView, Platform,
 } from 'react-native';
 
 import MapView, {
@@ -25,6 +25,7 @@ import iceAnim  from '../../assets/animations/ice.json';
 
 const { width, height } = Dimensions.get('window');
 const CHIP_CATEGORIES = ['Discoteca', 'Pub', 'Cafetería', 'Terraza', 'Azotea'];
+
 
 /* ---------------- event info (desde offers.tsx) ------------------ */
 interface EventInfo {
@@ -146,13 +147,13 @@ export default function PantallaMapa(){
     if(loading||!region) return(<View style={styles.loader}><ActivityIndicator size="large" color="#8A2BE2"/></View>);
 
     /* ---------- icono según categoría ---------- */
-    const getMarkerEmoji=(cat:string)=>cat==='Discoteca'?'🪩':cat==='Cafetería'?'🍻':cat==='Pub'?'🍸':'🍸';
+    const getMarkerEmoji=(cat:string)=>cat==='Discoteca'?'🪩':cat==='Cafeteria'?'🍻':cat==='Pub'?'🍸':'🍸';
 
     /* JSX */
     return(
         <View style={styles.container}>
             {/* MAPA */}
-            <MapView ref={mapRef} style={styles.map} provider={PROVIDER_GOOGLE} initialRegion={region} customMapStyle={mapaOscuro} showsUserLocation rotateEnabled={false}>
+            <MapView ref={mapRef} style={styles.map} provider={PROVIDER_GOOGLE} initialRegion={region} customMapStyle={mapaOscuro} showsUserLocation rotateEnabled={false} onPanDrag={()=>{}}>
                 {pubsFiltrados.map(p=><Circle key={`c${p.id}`} center={{latitude:p.latitude,longitude:p.longitude}} radius={90} strokeWidth={0} fillColor="rgba(167,65,235,0.35)"/>)}
                 {factioOn&&crowd.map(d=><Circle key={d.id} center={{latitude:d.lat,longitude:d.lng}} radius={Platform.OS==='ios'?15:20} strokeWidth={0} fillColor="rgba(255,105,180,0.15)"/>)}
 
@@ -233,7 +234,9 @@ export default function PantallaMapa(){
             )}
 
             <StatusBar style="light"/>
+
         </View>
+
     );
 }
 /* ---------------- estilos ---------------- */

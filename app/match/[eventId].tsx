@@ -1,6 +1,4 @@
-// app/match/[eventId].tsx // Ruta correcta del archivo
-// Asumo que la ruta será así o similar usando expo-router dynamic routes
-
+// app/match/[eventId].tsx (mover fuera de (tabs) para ocultar tab bar)
 import React, { useState, useRef, useEffect } from 'react';
 import {
     View,
@@ -11,258 +9,231 @@ import {
     TouchableOpacity,
     Animated,
     PanResponder,
-    ActivityIndicator, // Para indicador de carga
-    Alert, // Para mostrar errores o matches
-    Modal, // Para el modal de match
-    Pressable, // Para el fondo del modal
-    TouchableWithoutFeedback, // Para evitar cerrar modal al tocar dentro
+    ActivityIndicator,
+    // Modal, Pressable, TouchableWithoutFeedback removed as per File 1 swipe logic
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-// import participantsData from '../data/participants.json'; // ELIMINAR
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Para obtener el token
 
 const { width, height } = Dimensions.get('window');
-const SWIPE_THRESHOLD = width * 0.25; // Umbral para considerar un swipe completo
-const SWIPE_OUT_DURATION = 250; // Duración de la animación de salida
-const API_BASE_URL = 'https://e64d-2a0c-5a82-c201-2100-19ae-8cd2-77f2-647c.ngrok-free.app'; // Asegúrate de que es la URL correcta de tu backend
-const AUTH_TOKEN_KEY = 'userToken'; // Clave usada para guardar el token
+const SWIPE_THRESHOLD = 0.25 * width; // From File 1
+const SWIPE_OUT_DURATION = 250; // From File 1
 
-// Definir la interfaz de los participantes basada en lo que retorna tu backend
+// Interface for a participant, from File 2 (more comprehensive)
 interface Participant {
-    cod_usuario: number; // ID del usuario, usado para likes/dislikes
+    cod_usuario: number;
     nombre: string | null;
-    username: string | null; // Si quieres mostrar el username también
+    username: string | null;
     edad: number | null;
-    genero: 'masculino' | 'femenino' | 'otro' | null; // Usar valores ENUM
-    orientacion_sexual: 'homosexual' | 'heterosexual' | 'bisexual' | 'otro' | null; // Usar valores ENUM
-    foto_url_1: string | null; // URL de la foto 1
-    foto_url_2: string | null; // URL de la foto 2
-    url_fotoperfil: string | null; // URL de la foto de perfil principal
+    genero: 'masculino' | 'femenino' | 'otro' | null;
+    orientacion_sexual: 'homosexual' | 'heterosexual' | 'bisexual' | 'otro' | null;
+    foto_url_1: string | null;
+    foto_url_2: string | null;
+    url_fotoperfil: string | null;
     bio: string | null;
     intereses: string | null;
-    // ... otros campos que selecciones en la consulta SQL
+    estudios_trabajo?: string | null;
 }
 
-export default function EventTinderScreen() { // Renombrado para mayor claridad
+// --- INICIO: Datos de participantes locales POR EVENTO (from File 2) ---
+interface EventParticipants {
+    [eventId: number]: Participant[];
+}
+
+const allLocalParticipantsData: EventParticipants = {
+    1006: [ // Evento existente
+        {
+            cod_usuario: 101, nombre: 'Elena Rivers', username: 'elena_r_event1', edad: 29, genero: 'femenino', orientacion_sexual: 'heterosexual',
+            url_fotoperfil: 'https://images.unsplash.com/photo-1520813792240-56fc4a3765a7?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80',
+            foto_url_1: 'https://images.unsplash.com/photo-1520813792240-56fc4a3765a7?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80', foto_url_2: null,
+            bio: 'Amante de los viajes y la fotografía en el Evento Alpha.', intereses: 'Viajes, Fotografía, Senderismo', estudios_trabajo: 'Diseñadora Gráfica',
+        },
+        {
+            cod_usuario: 102, nombre: 'Marco Diaz', username: 'marco_d_event1', edad: 32, genero: 'masculino', orientacion_sexual: 'homosexual',
+            url_fotoperfil: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80',
+            foto_url_1: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80', foto_url_2: null,
+            bio: 'Desarrollador de software listo para el Evento Alpha.', intereses: 'Tecnología, Videojuegos, Café', estudios_trabajo: 'Ingeniero de Software',
+        },
+        {
+            cod_usuario: 105, nombre: 'Anaïs Dubois', username: 'anais_d_event1', edad: 26, genero: 'femenino', orientacion_sexual: 'bisexual',
+            url_fotoperfil: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80',
+            foto_url_1: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80', foto_url_2: null,
+            bio: 'Chef pastelera y amante del arte. Solo en Evento Alpha.', intereses: 'Cocina, Arte, Música clásica', estudios_trabajo: 'Chef Pastelera',
+        }
+    ],
+    1003: [ // Evento existente
+        {
+            cod_usuario: 103, nombre: 'Sofia Chen', username: 'sofia_c_event2_match', edad: 27, genero: 'femenino', orientacion_sexual: 'bisexual',
+            url_fotoperfil: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80',
+            foto_url_1: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80', foto_url_2: null,
+            bio: 'Música y conciertos en el Evento Beta. ¡Haz match conmigo!', intereses: 'Música, Conciertos, Arte', estudios_trabajo: 'Productora Musical',
+        },
+        {
+            cod_usuario: 104, nombre: 'Leo Baker', username: 'leo_b_event2', edad: 30, genero: 'otro', orientacion_sexual: 'otro',
+            url_fotoperfil: 'https://images.unsplash.com/photo-1521119989659-a83eee488004?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80',
+            foto_url_1: 'https://images.unsplash.com/photo-1521119989659-a83eee488004?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80', foto_url_2: null,
+            bio: 'Escritor y soñador en el Evento Beta.', intereses: 'Literatura, Escritura, Filosofía', estudios_trabajo: 'Escritor Freelance',
+        }
+    ],
+    1004: [ // Evento existente
+        {
+            cod_usuario: 301, nombre: 'Laura Jones', username: 'laura_j_event3', edad: 28, genero: 'femenino', orientacion_sexual: 'heterosexual',
+            url_fotoperfil: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80',
+            foto_url_1: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80', foto_url_2: null,
+            bio: 'Veterinaria apasionada por los animales. Buscando conocer gente en el Evento Gamma.', intereses: 'Animales, Naturaleza, Voluntariado', estudios_trabajo: 'Veterinaria',
+        }
+    ],
+    // --- INICIO: Nuevos datos para el evento 1005 ---
+    1005: [
+        {
+            cod_usuario: 501, nombre: 'Carlos Vega', username: 'cvega_event1005', edad: 31, genero: 'masculino', orientacion_sexual: 'heterosexual',
+            url_fotoperfil: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80',
+            foto_url_1: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80', foto_url_2: null,
+            bio: 'Ingeniero y aficionado al ciclismo de montaña. Aquí para el Evento Delta.', intereses: 'Ciclismo, Tecnología, Senderismo', estudios_trabajo: 'Ingeniero Mecánico',
+        },
+        {
+            cod_usuario: 502, nombre: 'Isabel Luna', username: 'iluna_event1005', edad: 27, genero: 'femenino', orientacion_sexual: 'bisexual',
+            url_fotoperfil: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80', // Re-used for example
+            foto_url_1: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80', foto_url_2: null,
+            bio: 'Artista plástica explorando nuevas conexiones en Evento Delta.', intereses: 'Pintura, Escultura, Cine de autor', estudios_trabajo: 'Artista Freelance',
+        },
+        {
+            cod_usuario: 503, nombre: 'Alex Chen', username: 'achen_event1005', edad: 29, genero: 'otro', orientacion_sexual: 'pansexual', // Assuming 'pansexual' would fall under 'otro' or you'd extend the enum
+            url_fotoperfil: 'https://images.unsplash.com/photo-1531123414780-f74242c2b052?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80',
+            foto_url_1: 'https://images.unsplash.com/photo-1531123414780-f74242c2b052?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80', foto_url_2: null,
+            bio: 'Activista y amante de la literatura. Buscando conversaciones profundas en Evento Delta.', intereses: 'Derechos Humanos, Literatura, Yoga', estudios_trabajo: 'Sociólogo',
+        }
+    ],
+    // --- FIN: Nuevos datos para el evento 1005 ---
+
+    // --- INICIO: Nuevos datos para el evento 1007 ---
+    1007: [
+        {
+            cod_usuario: 701, nombre: 'Roberto Morales', username: 'rmorales_event1007', edad: 35, genero: 'masculino', orientacion_sexual: 'heterosexual',
+            url_fotoperfil: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80',
+            foto_url_1: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80', foto_url_2: null,
+            bio: 'Chef ejecutivo apasionado por la gastronomía local. Presente en Evento Sigma.', intereses: 'Cocina Fusión, Vinos, Viajes Culinarios', estudios_trabajo: 'Chef Ejecutivo',
+        },
+        {
+            cod_usuario: 702, nombre: 'Gabriela Silva', username: 'gsilva_event1007', edad: 29, genero: 'femenino', orientacion_sexual: 'heterosexual',
+            url_fotoperfil: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80',
+            foto_url_1: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80', foto_url_2: null,
+            bio: 'Periodista curiosa y siempre en busca de una buena historia. Evento Sigma.', intereses: 'Lectura, Documentales, Fotografía Urbana', estudios_trabajo: 'Periodista',
+        },
+        {
+            cod_usuario: 703, nombre: 'Kenji Tanaka', username: 'ktanaka_event1007', edad: 32, genero: 'masculino', orientacion_sexual: 'homosexual',
+            url_fotoperfil: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80',
+            foto_url_1: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80', foto_url_2: null,
+            bio: 'Arquitecto minimalista y amante del buen diseño. Descubriendo Evento Sigma.', intereses: 'Arquitectura, Diseño de Interiores, Música Electrónica', estudios_trabajo: 'Arquitecto',
+        },
+        {
+            cod_usuario: 704, nombre: 'Olivia Reed', username: 'oreed_event1007', edad: 26, genero: 'femenino', orientacion_sexual: 'bisexual',
+            url_fotoperfil: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80', // Re-used for example
+            foto_url_1: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80', foto_url_2: null,
+            bio: 'Bailarina profesional y coreógrafa. Explorando el ritmo en Evento Sigma.', intereses: 'Danza Contemporánea, Teatro, Viajes', estudios_trabajo: 'Bailarina y Coreógrafa',
+        }
+    ]
+    // --- FIN: Nuevos datos para el evento 1007 ---
+};
+// --- FIN: Datos de participantes locales POR EVENTO ---
+
+export default function MatchScreen() {
     const router = useRouter();
     const { eventId } = useLocalSearchParams<{ eventId: string }>();
-    const eventCod = parseInt(eventId || '0', 10); // Obtener el ID del evento como número
+    const eventCod = parseInt(eventId || '0', 10);
 
     const [participants, setParticipants] = useState<Participant[]>([]);
-    const [index, setIndex] = useState(0); // Índice del participante actual
-    const [isLoading, setIsLoading] = useState(true); // Estado para carga inicial
-    const [error, setError] = useState<string | null>(null); // Estado para errores
+    const [index, setIndex] = useState(0);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    // Animación para la tarjeta
     const position = useRef(new Animated.ValueXY()).current;
+    const [matchAnim] = useState(new Animated.Value(0)); // For match icon animation
+    const [showMatchIcon, setShowMatchIcon] = useState(false); // To show/hide match icon
 
-    // Animación y estado para el icono de match (local)
-    const [matchAnim] = useState(new Animated.Value(0));
-    const [showMatchIcon, setShowMatchIcon] = useState(false);
-
-    // Estado y animación para el modal de match
-    const [matchModalVisible, setMatchModalVisible] = useState(false);
-    const [matchedUserName, setMatchedUserName] = useState<string | null>(null); // Nombre del usuario con el que se hizo match
-
-
-    // --- Cargar participantes del backend ---
     useEffect(() => {
-        const fetchParticipants = async () => {
-            setIsLoading(true);
-            setError(null);
-            const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY); // Obtener el token guardado
-
-            if (!token) {
-                setError('Usuario no autenticado. Por favor, inicia sesión.');
-                setIsLoading(false);
-                // router.replace('/login'); // Redirigir si no hay token
-                return;
-            }
+        setIsLoading(true);
+        setError(null);
+        // Simulating load time
+        setTimeout(() => {
             if (isNaN(eventCod) || eventCod <= 0) {
                 setError('ID de evento inválido.');
+                setParticipants([]);
                 setIsLoading(false);
                 return;
             }
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/eventos/${eventCod}/participantes`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`, // Incluir el token de autenticación
-                        'Content-Type': 'application/json',
-                    },
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    setError(data.error || 'Error desconocido al cargar participantes.');
-                    console.error('API Error fetching participants:', data.error);
-                    setParticipants([]); // Limpiar participantes si hay error
-                } else {
-                    // Asume que 'data' es directamente el array de participantes
-                    setParticipants(data);
-                    console.log(`Participantes cargados para evento ${eventCod}:`, data.length);
-                    setIndex(0); // Resetear índice al cargar nuevos participantes
-                }
-
-            } catch (err: any) {
-                console.error('Fetch error fetching participants:', err);
-                setError('No se pudo conectar con el servidor o error de red.');
-                setParticipants([]); // Limpiar participantes si hay error
-            } finally {
-                setIsLoading(false);
+            const eventSpecificParticipants = allLocalParticipantsData[eventCod] || [];
+            setParticipants(eventSpecificParticipants);
+            setIndex(0);
+            if (eventSpecificParticipants.length === 0) {
+                setError(allLocalParticipantsData.hasOwnProperty(eventCod) ? `No hay participantes definidos para el evento ${eventCod} por ahora.` : `Evento con ID ${eventCod} no encontrado.`);
             }
-        };
+            setIsLoading(false);
+        }, 500);
+    }, [eventCod]);
 
-        fetchParticipants();
-    }, [eventCod]); // Recargar participantes si el ID del evento cambia
-
-
-    // --- PanResponder para gestos de swipe ---
     const panResponder = useRef(
         PanResponder.create({
-            onStartShouldSetPanResponder: () => true, // Permitir que este componente responda a gestos táctiles
+            onStartShouldSetPanResponder: () => true,
+            onMoveShouldSetPanResponder: (evt, gestureState) => Math.abs(gestureState.dx) > 5 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy), // Kept from File 2 for responsiveness
             onPanResponderMove: (_, gesture) => {
-                position.setValue({ x: gesture.dx, y: gesture.dy }); // Mover la tarjeta según el gesto
+                position.setValue({ x: gesture.dx, y: gesture.dy });
             },
             onPanResponderRelease: (_, gesture) => {
                 if (gesture.dx > SWIPE_THRESHOLD) {
-                    forceSwipe('right'); // Swipe a la derecha
+                    forceSwipe('right');
                 } else if (gesture.dx < -SWIPE_THRESHOLD) {
-                    forceSwipe('left'); // Swipe a la izquierda
+                    forceSwipe('left');
                 } else {
-                    resetPosition(); // Volver a la posición original si no se supera el umbral
+                    resetPosition();
                 }
             },
+            onPanResponderTerminationRequest: () => true, // Kept from File 2
+            onPanResponderTerminate: () => resetPosition(), // Kept from File 2
+            onShouldBlockNativeResponder: () => true, // Kept from File 2
         })
     ).current;
 
-    // Estilo animado para la tarjeta (incluye traslación y rotación)
-    const getCardStyle = () => {
-        const rotate = position.x.interpolate({
-            inputRange: [-width / 2, 0, width / 2], // Rango de movimiento horizontal
-            outputRange: ['-10deg', '0deg', '10deg'], // Rango de rotación correspondiente
-            extrapolate: 'clamp', // Evita que la rotación se salga del rango
-        });
-        return {
-            ...position.getTranslateTransform(), // Aplicar traslación X e Y
-            rotate: rotate, // Aplicar rotación
-        };
-    };
-
-    // --- Lógica de Swipe (Enviar a Backend) ---
-    const forceSwipe = async (direction: 'left' | 'right') => {
-        const currentParticipant = participants[index];
-        if (!currentParticipant) return; // No hacer nada si no hay participante
-
-        const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
-        if (!token) {
-            Alert.alert('Error', 'Usuario no autenticado. Por favor, inicia sesión.');
-            // router.replace('/login'); // Redirigir si no hay token
-            return;
-        }
-        if (isNaN(eventCod) || eventCod <= 0) {
-            Alert.alert('Error', 'ID de evento inválido.');
-            return;
-        }
-
-        // Opcional: mostrar un indicador mientras se envía el swipe
-        // setIsLoading(true);
-
-        try {
-            const endpoint = direction === 'right' ?
-                `${API_BASE_URL}/api/eventos/${eventCod}/like` :
-                `${API_BASE_URL}/api/eventos/${eventCod}/dislike`; // Usar endpoint de dislike si existe
-
-            // --- CORRECCIÓN: Construir el body condicionalmente y con sintaxis correcta ---
-            let bodyContent: { likedUserId?: number; dislikedUserId?: number; };
-            if (direction === 'right') {
-                bodyContent = { likedUserId: currentParticipant.cod_usuario };
-            } else { // direction === 'left'
-                bodyContent = { dislikedUserId: currentParticipant.cod_usuario };
-            }
-
-            const body = JSON.stringify(bodyContent); // Stringify el objeto construido
-            // --- FIN CORRECCIÓN ---
-
-
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: body,
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                Alert.alert(`Error al procesar ${direction === 'right' ? 'like' : 'dislike'}`, data.error || 'Error desconocido.');
-                console.error(`API Error on swipe ${direction}:`, data.error);
-                // No avanzar al siguiente perfil si hubo error
-                // setIsLoading(false); // Detener indicador si hubo error
-                return;
-            }
-
-            console.log(`Swipe ${direction} procesado. Backend response:`, data);
-
-            // Si el swipe fue un like y el backend indica que resultó en un match
-            if (direction === 'right' && data.match) { // El backend debe enviar { match: true }
-                console.log("¡MATCH DETECTADO!");
-                setMatchedUserName(currentParticipant.nombre || currentParticipant.username || 'este usuario'); // Guardar nombre para el modal
-                // Activar animación de match local (opcional)
-                setShowMatchIcon(true);
-                Animated.sequence([
-                    Animated.timing(matchAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-                    Animated.delay(1000), // Mostrar el icono un tiempo
-                    Animated.timing(matchAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
-                ]).start(() => {
-                    setShowMatchIcon(false);
-                    setMatchModalVisible(true); // Mostrar el modal de match
-                });
-
-            } else {
-                // Si no fue un match o fue un dislike, simplemente mover a la siguiente tarjeta
-                moveToNextCard();
-            }
-
-
-        } catch (err: any) {
-            console.error(`Fetch error on swipe ${direction}:`, err);
-            Alert.alert('Error de conexión', 'No se pudo enviar el swipe al servidor.');
-            // No avanzar al siguiente perfil si hubo error de red
-            // setIsLoading(false); // Detener indicador si hubo error
-        }
-    };
-
-    // Animar la tarjeta saliente y pasar a la siguiente
-    const moveToNextCard = () => {
-        // Animar la tarjeta saliente fuera de la pantalla
+    // Swipe logic from File 1
+    const forceSwipe = (direction: 'left' | 'right') => {
         Animated.timing(position, {
-            toValue: { x: width * (position.x._value > 0 ? 1 : -1), y: 0 }, // Swipe hacia el lado correspondiente
+            toValue: { x: direction === 'right' ? width : -width, y: 0 },
             duration: SWIPE_OUT_DURATION,
-            useNativeDriver: false, // Usar false si Animated.ValueXY está involucrado
-        }).start(() => {
-            position.setValue({ x: 0, y: 0 }); // Resetear posición para la siguiente tarjeta
-            setIndex(i => i + 1); // Mover al siguiente índice
-            // setIsLoading(false); // Detener el indicador de carga después de la animación (si lo activaste en forceSwipe)
-        });
+            useNativeDriver: false, // Must be false for Animated.ValueXY position
+        }).start(() => onSwipeComplete(direction));
     };
 
-    // Volver la tarjeta a la posición original
+    // onSwipeComplete logic from File 1
+    const onSwipeComplete = (direction: 'left' | 'right') => {
+        if (direction === 'right') {
+            setShowMatchIcon(true);
+            Animated.sequence([
+                Animated.timing(matchAnim, { toValue: 1, duration: 300, useNativeDriver: true }), // useNativeDriver: true for opacity
+                Animated.delay(500),
+                Animated.timing(matchAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+            ]).start(() => {
+                setShowMatchIcon(false);
+                // Common logic after animation completes
+                position.setValue({ x: 0, y: 0 });
+                setIndex(i => i + 1);
+            });
+        } else { // Left swipe
+            position.setValue({ x: 0, y: 0 });
+            setIndex(i => i + 1);
+        }
+    };
+
+    // resetPosition logic from File 1
     const resetPosition = () => {
         Animated.spring(position, { toValue: { x: 0, y: 0 }, useNativeDriver: false }).start();
     };
 
-    // --- Renderizado ---
+
     if (isLoading) {
         return (
             <View style={styles.centered}>
                 <ActivityIndicator size="large" color="#e14eca" />
-                <Text style={styles.loadingText}>Cargando participantes...</Text>
+                <Text style={styles.loadingText}>Cargando participantes para el evento {eventCod}...</Text>
             </View>
         );
     }
@@ -279,59 +250,61 @@ export default function EventTinderScreen() { // Renombrado para mayor claridad
         );
     }
 
-
+    // "No more participants" screen - kept enriched version from File 2 / previous merge
     if (index >= participants.length) {
         return (
             <View style={styles.centered}>
-                <Text style={styles.noMore}>No quedan más participantes en este evento por ahora.</Text>
-                {/* Botón para ver matches en este evento (navega a una nueva pantalla) */}
-                <TouchableOpacity style={styles.matchesButton} onPress={() => router.push(`/event/${eventCod}/matches` as any)}> {/* Ajusta la ruta */}
+                <Text style={styles.noMore}>No quedan más participantes en el evento {eventCod} por ahora.</Text>
+                <TouchableOpacity style={styles.matchesButton} onPress={() => router.push(`/event/${eventCod}/matches` as any)}>
                     <Text style={styles.matchesButtonText}>Ver Mis Matches en este Evento</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButtonBottom}>
                     <MaterialCommunityIcons name="arrow-left" size={30} color="#fff" />
-                    <Text style={styles.backButtonText}>Volver al Evento</Text>
+                    <Text style={styles.backButtonText}>Volver a Eventos</Text>
                 </TouchableOpacity>
             </View>
         );
     }
 
-    // Participante actual a mostrar
     const person = participants[index];
-    // Determinar qué foto mostrar primero (ej: foto de perfil principal si existe)
-    const mainPhoto = person.url_fotoperfil || person.foto_url_1 || person.foto_url_2; // Usar la primera foto disponible
+    const mainPhoto = person.url_fotoperfil || person.foto_url_1 || person.foto_url_2;
 
+    // Card rotation from File 1
+    const rotate = position.x.interpolate({
+        inputRange: [-width * 1.5, 0, width * 1.5],
+        outputRange: ['-20deg', '0deg', '20deg'],
+        extrapolate: 'clamp', // Good practice to add extrapolate
+    });
 
     return (
         <View style={styles.container}>
-            {/* Renderizar solo la tarjeta actual */}
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButtonTopAbsolute}>
+                <MaterialCommunityIcons name="arrow-left" size={30} color="#fff" />
+            </TouchableOpacity>
+
             {person && (
                 <Animated.View
-                    {...panResponder.panHandlers} // Adjuntar manejadores de gestos
-                    style={[styles.card, getCardStyle()]} // Aplicar estilos animados
+                    {...panResponder.panHandlers}
+                    // Card transform includes File 1's rotation
+                    style={[styles.card, { transform: [...position.getTranslateTransform(), { rotate }] }]}
                 >
-                    {/* Usar la URL de la foto principal del backend */}
                     <Image
-                        source={{ uri: mainPhoto || 'https://via.placeholder.com/300x400?text=No+Photo' }} // Placeholder si no hay foto
-                        style={styles.image}
-                        onError={(e) => console.error('Error loading image:', e.nativeEvent.error, 'URL:', mainPhoto)} // Log de errores de carga de imagen
+                        source={{ uri: mainPhoto || 'https://via.placeholder.com/300x400?text=No+Photo' }}
+                        style={styles.image} // Using File 1's simpler image and name display directly on card
+                        onError={(e) => console.error('Error loading image:', e.nativeEvent.error, 'URL:', mainPhoto)}
                     />
+                    {/* Info Overlay from File 2 for richer info display, can be simplified if needed */}
                     <View style={styles.infoOverlay}>
-                        <Text style={styles.name}>
-                            {person.nombre || person.username} {/* Mostrar nombre o username */}
+                        <Text style={styles.nameOnCard} numberOfLines={1} ellipsizeMode="tail">
+                            {person.nombre || person.username}
                             {person.edad !== null && person.edad !== undefined ? `, ${person.edad}` : ''}
                         </Text>
-                        {person.bio && <Text style={styles.bioText}>{person.bio}</Text>}
-                        {/* Mostrar orientación y género si existen */}
-                        {person.genero && <Text style={styles.detailText}>Género: {person.genero}</Text>}
-                        {person.orientacion_sexual && <Text style={styles.detailText}>Orientación: {person.orientacion_sexual}</Text>}
-                        {/* Mostrar estudios/trabajo si existen */}
-                        {person.estudios_trabajo && <Text style={styles.detailText}>Estudios/Trabajo: {person.estudios_trabajo}</Text>}
-                        {person.intereses && <Text style={styles.detailText}>Intereses: {person.intereses}</Text>}
-
+                        {person.bio && <Text style={styles.bioText} numberOfLines={2} ellipsizeMode="tail">{person.bio}</Text>}
                     </View>
 
-                    {showMatchIcon && ( // Icono de match local (solo animación visual temporal)
+
+                    {/* Match icon display from File 1 */}
+                    {showMatchIcon && (
                         <Animated.View style={[styles.matchIconContainer, { opacity: matchAnim }]}>
                             <Text style={styles.matchEmoji}>💖</Text>
                         </Animated.View>
@@ -339,171 +312,122 @@ export default function EventTinderScreen() { // Renombrado para mayor claridad
                 </Animated.View>
             )}
 
-            {/* Botones de swipe */}
-            <View style={styles.buttonsContainer}>
-                <TouchableOpacity onPress={() => forceSwipe('left')} disabled={isLoading || index >= participants.length}>
-                    <Text style={styles.buttonEmoji}>❌</Text> {/* Icono de rechazo */}
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => forceSwipe('right')} disabled={isLoading || index >= participants.length}>
-                    <Text style={styles.buttonEmoji}>💖</Text> {/* Icono de like */}
-                </TouchableOpacity>
-            </View>
-
-            {/* Botón para volver al evento (fijo en la parte inferior) */}
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButtonBottomAbsolute}>
-                <MaterialCommunityIcons name="arrow-left" size={30} color="#fff" />
-                <Text style={styles.backButtonText}>Volver al Evento</Text>
-            </TouchableOpacity>
-
-            {/* Modal de Match */}
-            <Modal
-                animationType="fade" // o "slide"
-                transparent={true}
-                visible={matchModalVisible}
-                onRequestClose={() => setMatchModalVisible(false)} // Para Android back button
-            >
-                <Pressable style={styles.modalOverlay} onPress={() => setMatchModalVisible(false)}>
-                    <TouchableWithoutFeedback>
-                        <View style={styles.matchModalContent}>
-                            <Text style={styles.matchModalTitle}>¡Es un Match!</Text>
-                            <Text style={styles.matchModalText}>¡Has hecho match con {matchedUserName}!</Text>
-                            <Text style={styles.matchModalEmoji}>🎉</Text> {/* O un icono más grande */}
-                            {/* Opcional: Botón para ir al chat o ver perfil del match */}
-                            {/* <TouchableOpacity style={styles.matchModalButton} onPress={() => { setMatchModalVisible(false); router.push(`/chat/${matchedUserId}`); }}>
-                                 <Text style={styles.matchModalButtonText}>Enviar Mensaje</Text>
-                             </TouchableOpacity> */}
-                            <TouchableOpacity style={styles.matchModalCloseButton} onPress={() => { setMatchModalVisible(false); moveToNextCard(); }}>
-                                <Text style={styles.matchModalCloseButtonText}>Continuar Swiping</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </TouchableWithoutFeedback>
-                </Pressable>
-            </Modal>
-
+            {/* Buttons with File 1 emojis and functionality */}
+            {person && !isLoading && !error && (
+                <View style={styles.buttonsContainer}>
+                    <TouchableOpacity style={styles.buttonCircle} onPress={() => forceSwipe('left')} disabled={isLoading || index >= participants.length}>
+                        <Text style={styles.buttonEmojiFile1}>😕</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.buttonCircle} onPress={() => forceSwipe('right')} disabled={isLoading || index >= participants.length}>
+                        <Text style={styles.buttonEmojiFile1}>😍</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex:1, backgroundColor:'#000', justifyContent:'center', alignItems:'center' },
-    centered:{ flex:1, justifyContent:'center', alignItems:'center', backgroundColor:'#000' },
+    container: { flex:1, backgroundColor:'#000', justifyContent:'center', alignItems:'center', paddingTop: 40, paddingBottom: 120 },
+    centered:{ flex:1, justifyContent:'center', alignItems:'center', backgroundColor:'#000', paddingHorizontal: 20 },
     loadingText: { color: '#fff', marginTop: 10, fontSize: 16 },
     errorText: { color: 'red', fontSize: 16, textAlign: 'center', marginBottom: 20 },
     noMore:{ color:'#fff', fontSize:18, marginBottom: 20, textAlign: 'center' },
-    card: {
+    card: { // Styles adapted from File 1 for card dimensions, but position managed by Animated.View
         width: width * 0.9,
-        height: height * 0.7, // Ajustar altura si es necesario
+        height: height * 0.75, // File 1 height
         borderRadius: 20,
         overflow: 'hidden',
-        backgroundColor: '#222',
-        position: 'absolute', // Para que solo se muestre la tarjeta actual
-        elevation: 5, // Sombra en Android
-        shadowColor: '#000', // Sombra en iOS
+        backgroundColor: '#222', // File 1 bg
+        position: 'absolute', // Important for PanResponder and swipe animations
+        elevation: 5,
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
     },
-    image:{ width:'100%', height:'70%', resizeMode: 'cover' }, // Ajustar altura de la imagen
-    infoOverlay: { // Contenedor para nombre y detalles sobre la imagen o debajo
-        position: 'absolute', // Opcional: ponerlo sobre la imagen en la parte inferior
-        bottom: 0,
+    image: { // From File 1 - image takes most of the card
+        width: '100%',
+        height: '85%', // File 1 image height
+        resizeMode: 'cover',
+    },
+    // Using infoOverlay from previous merge for richer info, placed below image area
+    infoOverlay: {
+        position: 'absolute',
+        bottom: 0, // At the bottom of the card
         left: 0,
         right: 0,
-        backgroundColor: 'rgba(0,0,0,0.6)', // Fondo semi-transparente
-        padding: 15,
-        // O si no quieres overlay, quita 'position: absolute' y ajusta la altura de la imagen/card
-        // height: '30%', // Si está debajo de la imagen en un diseño fijo
+        height: '15%', // Remaining space after image
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        paddingHorizontal: 15,
+        paddingVertical: 10, // Adjusted padding
+        justifyContent: 'center', // Center content vertically
+        borderBottomLeftRadius: 20,
+        borderBottomRightRadius: 20,
     },
-    name:{ color:'#fff', fontSize:24, fontWeight:'bold' },
-    bioText: { color: '#ccc', fontSize: 14, marginTop: 5 },
-    detailText: { color: '#ccc', fontSize: 12, marginTop: 2 }, // Estilo para orientación, género, etc.
-    backButtonBottom:{ marginTop:20 },
-    backButtonBottomAbsolute: { // Botón de volver fijo en la parte inferior
+    nameOnCard:{ // Adapted from File 1's name style for the overlay
+        color:'#fff',
+        fontSize:22,
+        fontWeight:'bold',
+        textAlign:'center',
+    },
+    bioText: { // Simplified bio for the overlay
+        color: '#f0f0f0',
+        fontSize: 14,
+        textAlign: 'center',
+        marginTop: 4,
+    },
+    backButtonTopAbsolute: {
         position: 'absolute',
-        bottom: 20, // Ajustar posición
-        alignSelf: 'center', // Centrar horizontalmente
-        padding: 10,
-        zIndex: 10, // Asegurarse de que esté visible
-        flexDirection: 'row', // Para icono y texto
-        alignItems: 'center',
+        top: 50,
+        left: 20,
+        zIndex: 100,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        borderRadius: 20,
+        padding: 5,
     },
+    backButtonBottom:{ marginTop:20, flexDirection: 'row', alignItems: 'center', padding: 10, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 20 },
     backButtonText: { color: '#fff', marginLeft: 5, fontSize: 16 },
-    matchesButton: { // Botón para ver matches después de acabar los swipes
+    matchesButton: {
         marginTop: 20,
         backgroundColor: '#e14eca',
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 20,
+        paddingVertical: 12,
+        paddingHorizontal: 25,
+        borderRadius: 25,
     },
     matchesButtonText: {
         color: '#fff',
         fontSize: 16,
         fontWeight: 'bold',
     },
-    matchIconContainer:{ position:'absolute', top:'30%', alignSelf:'center', zIndex: 5 }, // zIndex para que esté sobre la tarjeta
-    matchEmoji:{ fontSize:100 }, // Icono de match más grande
-    buttonsContainer:{ position:'absolute', bottom:80, width:'60%', flexDirection:'row', justifyContent:'space-between', zIndex: 10 }, // Ajustar bottom y zIndex
-    buttonEmoji:{ fontSize:50 }, // Iconos de swipe más grandes
-
-    // Estilos para el Modal de Match
-    modalOverlay: {
-        flex: 1,
+    // Match icon styles from File 1
+    matchIconContainer:{
+        position:'absolute',
+        top:'40%',
+        alignSelf:'center',
+        zIndex: 5 // Ensure it's above image but below other potential overlays if any
+    },
+    matchEmoji:{ // For on-card match icon, from File 1
+        fontSize: 80
+    },
+    buttonsContainer:{
+        position:'absolute',
+        bottom: 50, // File 1 position
+        width:'60%', // File 1 width
+        flexDirection:'row',
+        justifyContent:'space-between', // File 1 spacing
+        alignItems: 'center',
+        zIndex: 10
+    },
+    buttonCircle: { // Generic circle style for buttons
+        backgroundColor: 'rgba(40,40,40,0.8)',
+        width: 60, // A bit larger to accommodate File 1 emoji size
+        height: 60,
+        borderRadius: 30,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.8)', // Fondo oscuro semi-transparente
     },
-    matchModalContent: {
-        backgroundColor: '#1e1e1e', // Fondo del modal oscuro
-        borderRadius: 20,
-        padding: 30,
-        alignItems: 'center',
-        width: '80%',
-        shadowColor: '#e14eca', // Sombra con color de marca
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.5,
-        shadowRadius: 20,
-        elevation: 10,
-        borderWidth: 2,
-        borderColor: '#e14eca', // Borde con color de marca
-    },
-    matchModalTitle: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#fff',
-        marginBottom: 10,
-    },
-    matchModalText: {
-        fontSize: 18,
-        color: '#ccc',
-        textAlign: 'center',
-        marginBottom: 20,
-    },
-    matchModalEmoji: {
-        fontSize: 60,
-        marginBottom: 20,
-    },
-    matchModalButton: { // Estilo para un botón de acción adicional (ej: ir al chat)
-        backgroundColor: '#e14eca',
-        paddingVertical: 12,
-        paddingHorizontal: 25,
-        borderRadius: 25,
-        marginTop: 10,
-    },
-    matchModalButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    matchModalCloseButton: {
-        backgroundColor: '#555', // Botón para cerrar el modal
-        paddingVertical: 12,
-        paddingHorizontal: 25,
-        borderRadius: 25,
-        marginTop: 10,
-    },
-    matchModalCloseButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
+    buttonEmojiFile1:{ // Emoji style for buttons from File 1
+        fontSize: 40
     },
 });

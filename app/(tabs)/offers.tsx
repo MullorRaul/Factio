@@ -294,7 +294,7 @@ export default function OffersScreen() {
             pagingEnabled
             showsVerticalScrollIndicator={false}
             decelerationRate="fast"
-            snapToInterval={height}
+            snapToInterval={height - TAB_BAR_HEIGHT}
             snapToAlignment="start"
             onViewableItemsChanged={onViewRef.current}
             viewabilityConfig={viewConfigRef.current}

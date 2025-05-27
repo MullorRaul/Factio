@@ -10,4 +10,6 @@ export interface Punto {
     pinColor?: string;
     weight?: number; // Para el Heatmap
     eventPageName?: string; // <--- ¡Añadir esta línea!
+    category?: any;
+
 }
