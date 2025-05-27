@@ -1,5 +1,5 @@
 // app/(tabs)/eventos_delirium.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
@@ -13,73 +13,79 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 
-// const API_BASE_URL = 'http://192.168.1.142:3001';
-// const AUTH_TOKEN_KEY = 'userToken';
-
 interface Event {
     id: string;
     name: string;
     description: string;
     day: 'Jueves' | 'Viernes' | 'Sábado' | 'Domingo';
-    photo: any;
+    photo: any; // Assuming you'd have specific images for Gavana events
     time?: string;
     entryPrice?: string;
 }
 
 const DELIRIUM_EVENTS: Event[] = [
     {
-        id: 'd-jue-1',
-        name: 'Noche de Rock Clásico',
-        description: 'Los mejores temas de rock de los 70s y 80s.',
+        id: 'gav-jue-1',
+        name: 'Jueves Techno Universitario',
+        description: 'La noche universitaria más potente con sets de techno underground y minimal. ¡Ofertas en copas para estudiantes toda la noche!',
         day: 'Jueves',
-        photo: require('../assets/images/delirium.jpg'),
-        time: '22:00h',
-        entryPrice: 'Gratis',
+        photo: require('../assets/images/delirium.jpg'), // Placeholder, replace with Gavana image
+        time: '23:00h - 04:00h',
+        entryPrice: 'Gratis con carné universitario / 10€ sin carné (incluye consumición)',
     },
     {
-        id: 'd-vie-1',
-        name: 'Concierto Banda Local',
-        description: 'Actuación en vivo de banda local de rock alternativo.',
+        id: 'gav-vie-1',
+        name: 'Viernes Trance & Progressive',
+        description: 'Un viaje eufórico a través de los sonidos del trance melódico y progressive house. Eleva tus sentidos con visuales envolventes.',
         day: 'Viernes',
         photo: require('../assets/images/delirium.jpg'),
-        time: '23:30h',
-        entryPrice: '5€ con consumición',
+        time: '23:30h - 06:00h',
+        entryPrice: '15€ con 1 consumición',
     },
     {
-        id: 'd-vie-2',
-        name: 'Sesión DJ Rock',
-        description: 'DJ set con los hits del rock actual y clásico.',
+        id: 'gav-vie-2',
+        name: 'Dark Room: Acid & Industrial Techno',
+        description: 'Sumérgete en la oscuridad con los ritmos contundentes del acid y el techno industrial. Solo para los más atrevidos.',
         day: 'Viernes',
         photo: require('../assets/images/delirium.jpg'),
-        time: '01:00h',
-        entryPrice: 'Gratis',
+        time: '01:00h - 07:00h',
+        entryPrice: '20€ con 1 consumición',
     },
     {
-        id: 'd-sab-1',
-        name: 'Fiesta Temática: Grunge',
-        description: 'Revive la era del grunge con la mejor música.',
+        id: 'gav-sab-1',
+        name: 'Sábado Mainstage: EDM & Big Room Anthems',
+        description: 'La noche cumbre de Gavana con los DJs más explosivos y los himnos del EDM y Big Room que te harán vibrar. ¡Show de luces y CO2 garantizado!',
         day: 'Sábado',
         photo: require('../assets/images/delirium.jpg'),
-        time: '23:00h',
-        entryPrice: 'Gratis',
+        time: '00:00h - 07:00h',
+        entryPrice: '25€ con 2 consumiciones',
     },
     {
-        id: 'd-sab-2',
-        name: 'DJ Set Hard Rock',
-        description: 'Música potente para los amantes del hard rock y metal.',
+        id: 'gav-sab-2',
+        name: 'Minimal & Deep Tech Showcase',
+        description: 'Explora las profundidades del minimal y el deep tech con una selección exquisita de artistas locales e invitados. Un ambiente más íntimo y sofisticado.',
         day: 'Sábado',
         photo: require('../assets/images/delirium.jpg'),
-        time: '01:30h',
-        entryPrice: 'Gratis',
+        time: '01:30h - 06:00h',
+        entryPrice: 'Incluido con la entrada general',
     },
     {
-        id: 'd-dom-1',
-        name: 'Domingo de Blues Acústico',
-        description: 'Ambiente relajado con música blues en vivo.',
+        id: 'gav-dom-1',
+        name: 'Sunday Chill Out: Downtempo & Ambient',
+        description: 'Termina el fin de semana con una sesión relajada de downtempo y ambient electrónico. Perfecta para conversar y disfrutar de los últimos beats.',
         day: 'Domingo',
         photo: require('../assets/images/delirium.jpg'),
-        time: '20:00h',
-        entryPrice: 'Gratis',
+        time: '22:00h - 03:00h',
+        entryPrice: '10€ con 1 consumición',
+    },
+    {
+        id: 'gav-dom-2',
+        name: 'Gavana Closing Set: Classic House Revival',
+        description: 'Un viaje nostálgico a los orígenes del house con los clásicos que marcaron una era. La forma perfecta de despedir el fin de semana.',
+        day: 'Domingo',
+        photo: require('../assets/images/delirium.jpg'),
+        time: '00:00h - 04:00h',
+        entryPrice: 'Gratis para los que lleguen antes de la 1:00h',
     },
 ];
 
@@ -87,9 +93,18 @@ const DAYS_OF_WEEK: ('Jueves' | 'Viernes' | 'Sábado' | 'Domingo')[] = ['Jueves'
 
 export default function EventosDeliriumScreen() {
     const router = useRouter();
+    const [joinedEvents, setJoinedEvents] = useState<Set<string>>(new Set());
 
-    const handleJoinEvent = (event: Event) => {
-        Alert.alert('Apuntarse', `Te has interesado en: ${event.name} (${event.day})`);
+    const handleToggleJoinEvent = (event: Event) => {
+        const newJoinedEvents = new Set(joinedEvents);
+        if (newJoinedEvents.has(event.id)) {
+            newJoinedEvents.delete(event.id);
+            Alert.alert('Desapuntado', `Te has desapuntado de: ${event.name}`);
+        } else {
+            newJoinedEvents.add(event.id);
+            Alert.alert('Apuntado', `Te has apuntado a: ${event.name}`);
+        }
+        setJoinedEvents(newJoinedEvents);
     };
 
     const handleFactioPress = (event: Event) => {
@@ -101,12 +116,6 @@ export default function EventosDeliriumScreen() {
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="#0d0d0d" />
-
-            {/* --- ELIMINADO: Barra de encabezado personalizada --- */}
-            {/* <View style={styles.headerBar}>
-                <Text style={styles.title}>Eventos Delirium</Text>
-            </View> */}
-            {/* --- FIN ELIMINADO --- */}
 
             <ScrollView contentContainerStyle={styles.scrollViewContent}>
                 {DAYS_OF_WEEK.map(day => {
@@ -120,46 +129,51 @@ export default function EventosDeliriumScreen() {
                         <View key={day} style={styles.daySection}>
                             <Text style={styles.dayTitle}>{day}</Text>
 
-                            {eventsToday.map(event => (
-                                <View key={event.id} style={styles.eventCard}>
-                                    <View style={styles.eventInfo}>
-                                        <Text style={styles.eventName}>{event.name}</Text>
-                                        {event.time && (
-                                            <Text style={styles.eventDetail}>
-                                                Hora: {event.time}
-                                            </Text>
-                                        )}
-                                        {event.entryPrice && (
-                                            <Text style={styles.eventDetail}>
-                                                Entrada: {event.entryPrice}
-                                            </Text>
-                                        )}
-                                        <Text style={styles.eventDescription}>{event.description}</Text>
-
-                                        <View style={styles.buttonRow}>
-                                            <TouchableOpacity
-                                                style={styles.joinButton}
-                                                onPress={() => handleJoinEvent(event)}
-                                            >
-                                                <Text style={styles.joinButtonText}>Apuntarse</Text>
-                                            </TouchableOpacity>
-
-                                            {event.day === 'Jueves' ? (
-                                                <TouchableOpacity
-                                                    style={styles.factioButton}
-                                                    onPress={() => handleFactioPress(event)}
-                                                >
-                                                    <Text style={styles.factioButtonText}>Factio</Text>
-                                                </TouchableOpacity>
-                                            ) : (
-                                                <View style={styles.factioPlaceholder}>
-                                                    <Text style={styles.factioPlaceholderText}>Próximamente...</Text>
-                                                </View>
+                            {eventsToday.map(event => {
+                                const isJoined = joinedEvents.has(event.id);
+                                return (
+                                    <View key={event.id} style={styles.eventCard}>
+                                        <View style={styles.eventInfo}>
+                                            <Text style={styles.eventName}>{event.name}</Text>
+                                            {event.time && (
+                                                <Text style={styles.eventDetail}>
+                                                    Hora: {event.time}
+                                                </Text>
                                             )}
+                                            {event.entryPrice && (
+                                                <Text style={styles.eventDetail}>
+                                                    Entrada: {event.entryPrice}
+                                                </Text>
+                                            )}
+                                            <Text style={styles.eventDescription}>{event.description}</Text>
+
+                                            <View style={styles.buttonRow}>
+                                                <TouchableOpacity
+                                                    style={isJoined ? styles.leaveButton : styles.joinButton}
+                                                    onPress={() => handleToggleJoinEvent(event)}
+                                                >
+                                                    <Text style={styles.joinButtonText}>
+                                                        {isJoined ? 'Desapuntarse' : 'Apuntarse'}
+                                                    </Text>
+                                                </TouchableOpacity>
+
+                                                {event.day === 'Jueves' ? (
+                                                    <TouchableOpacity
+                                                        style={styles.factioButton}
+                                                        onPress={() => handleFactioPress(event)}
+                                                    >
+                                                        <Text style={styles.factioButtonText}>Factio</Text>
+                                                    </TouchableOpacity>
+                                                ) : (
+                                                    <View style={styles.factioPlaceholder}>
+                                                        <Text style={styles.factioPlaceholderText}>Próximamente...</Text>
+                                                    </View>
+                                                )}
+                                            </View>
                                         </View>
                                     </View>
-                                </View>
-                            ))}
+                                );
+                            })}
                         </View>
                     );
                 })}
@@ -172,32 +186,8 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#0d0d0d',
-        // Mantener este padding top para el espacio de la barra de estado
         paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     },
-    // --- ELIMINADO: Estilo de la barra de encabezado personalizada ---
-    // headerBar: {
-    //     height: 60,
-    //     backgroundColor: '#1e1e1e',
-    //     flexDirection: 'row',
-    //     alignItems: 'center',
-    //     justifyContent: 'center',
-    //     paddingHorizontal: 15,
-    //     borderBottomWidth: 1,
-    //     borderBottomColor: '#2a2a2a',
-    //     elevation: 5,
-    //     shadowColor: '#000',
-    //     shadowOffset: { width: 0, height: 2 },
-    //     shadowOpacity: 0.25,
-    //     shadowRadius: 3.84,
-    // },
-    // --- ELIMINADO: Estilo del título personalizado ---
-    // title: {
-    //     color: '#fff',
-    //     fontSize: 20,
-    //     fontWeight: 'bold',
-    // },
-
     scrollViewContent: {
         padding: 15,
     },
@@ -254,7 +244,14 @@ const styles = StyleSheet.create({
         paddingHorizontal: 0,
     },
     joinButton: {
-        backgroundColor: '#f4524d',
+        backgroundColor: '#f4524d', // Red for "Apuntarse"
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 20,
+        marginRight: 10,
+    },
+    leaveButton: {
+        backgroundColor: '#888', // Grey for "Desapuntarse"
         paddingVertical: 10,
         paddingHorizontal: 20,
         borderRadius: 20,

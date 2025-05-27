@@ -1,5 +1,5 @@
 // app/(tabs)/eventos_delirium.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
@@ -13,73 +13,79 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 
-// const API_BASE_URL = 'http://192.168.1.142:3001';
-// const AUTH_TOKEN_KEY = 'userToken';
-
 interface Event {
     id: string;
     name: string;
     description: string;
     day: 'Jueves' | 'Viernes' | 'Sábado' | 'Domingo';
-    photo: any;
+    photo: any; // Assuming you'd have specific images for Don Vito events
     time?: string;
     entryPrice?: string;
 }
 
 const DELIRIUM_EVENTS: Event[] = [
     {
-        id: 'd-jue-1',
-        name: 'Noche de Rock Clásico',
-        description: 'Los mejores temas de rock de los 70s y 80s.',
+        id: 'dv-jue-1',
+        name: 'Ladies Night: Ritmos Calientes',
+        description: 'La noche donde las mujeres son las protagonistas. Reggaeton, dembow y hip-hop. ¡Copas gratis para ellas hasta la 1:00h!',
         day: 'Jueves',
-        photo: require('../assets/images/delirium.jpg'),
-        time: '22:00h',
-        entryPrice: 'Gratis',
+        photo: require('../assets/images/delirium.jpg'), // Placeholder, replace with Don Vito image
+        time: '23:00h - 04:00h',
+        entryPrice: 'Gratis chicas hasta 1:00h / 15€ chicos con copa',
     },
     {
-        id: 'd-vie-1',
-        name: 'Concierto Banda Local',
-        description: 'Actuación en vivo de banda local de rock alternativo.',
+        id: 'dv-vie-1',
+        name: 'Viernes de Pasión: Latin & Salsa Sensual',
+        description: 'Una noche para sentir el fuego latino. Salsa, bachata, merengue y una mezcla picante de reggaeton clásico. ¡Clases de baile a las 23:30h!',
         day: 'Viernes',
         photo: require('../assets/images/delirium.jpg'),
-        time: '23:30h',
-        entryPrice: '5€ con consumición',
+        time: '22:00h - 05:00h',
+        entryPrice: '15€ con copa',
     },
     {
-        id: 'd-vie-2',
-        name: 'Sesión DJ Rock',
-        description: 'DJ set con los hits del rock actual y clásico.',
+        id: 'dv-vie-2',
+        name: 'After Dark: Secret House Session',
+        description: 'Cuando las luces bajan, la música se pone seria. Deep house y tech house con toques sensuales hasta el amanecer.',
         day: 'Viernes',
         photo: require('../assets/images/delirium.jpg'),
-        time: '01:00h',
-        entryPrice: 'Gratis',
+        time: '01:00h - 06:00h',
+        entryPrice: '20€ con copa',
     },
     {
-        id: 'd-sab-1',
-        name: 'Fiesta Temática: Grunge',
-        description: 'Revive la era del grunge con la mejor música.',
+        id: 'dv-sab-1',
+        name: 'Sábado V.I.P.: Decadencia y Glamour',
+        description: 'La noche más exclusiva. House comercial, R&B y los hits más sofisticados para una clientela selecta. Reservas de mesas disponibles.',
         day: 'Sábado',
         photo: require('../assets/images/delirium.jpg'),
-        time: '23:00h',
-        entryPrice: 'Gratis',
+        time: '23:30h - 07:00h',
+        entryPrice: '25€ con 2 copas (entrada anticipada)',
     },
     {
-        id: 'd-sab-2',
-        name: 'DJ Set Hard Rock',
-        description: 'Música potente para los amantes del hard rock y metal.',
+        id: 'dv-sab-2',
+        name: 'Red Room: Burlesque & Cabaret Show',
+        description: 'Déjate seducir por un show de burlesque y cabaret en vivo que encenderá la noche. Actuaciones cada hora.',
         day: 'Sábado',
         photo: require('../assets/images/delirium.jpg'),
-        time: '01:30h',
-        entryPrice: 'Gratis',
+        time: '00:30h - 02:30h',
+        entryPrice: 'Incluido con la entrada general',
     },
     {
-        id: 'd-dom-1',
-        name: 'Domingo de Blues Acústico',
-        description: 'Ambiente relajado con música blues en vivo.',
+        id: 'dv-dom-1',
+        name: 'Domingo de Conexiones: Speed Dating Nocturno',
+        description: 'Busca tu match en un ambiente divertido y sin presiones. Sesiones de speed dating seguidas de una fiesta para socializar.',
         day: 'Domingo',
         photo: require('../assets/images/delirium.jpg'),
-        time: '20:00h',
-        entryPrice: 'Gratis',
+        time: '21:00h (speed dating) - 03:00h (fiesta)',
+        entryPrice: '10€ (incluye participación y 1 copa)',
+    },
+    {
+        id: 'dv-dom-2',
+        name: 'Closing Affair: Smooth R&B & Neo-Soul',
+        description: 'Termina la semana con elegancia. Ritmos sensuales de R&B y neo-soul que invitan a la conversación y el coqueteo.',
+        day: 'Domingo',
+        photo: require('../assets/images/delirium.jpg'),
+        time: '23:00h - 04:00h',
+        entryPrice: '10€ con consumición',
     },
 ];
 
@@ -87,13 +93,24 @@ const DAYS_OF_WEEK: ('Jueves' | 'Viernes' | 'Sábado' | 'Domingo')[] = ['Jueves'
 
 export default function EventosDeliriumScreen() {
     const router = useRouter();
+    const [joinedEvents, setJoinedEvents] = useState<Set<string>>(new Set());
 
-    const handleJoinEvent = (event: Event) => {
-        Alert.alert('Apuntarse', `Te has interesado en: ${event.name} (${event.day})`);
+    const handleToggleJoinEvent = (event: Event) => {
+        const newJoinedEvents = new Set(joinedEvents);
+        if (newJoinedEvents.has(event.id)) {
+            newJoinedEvents.delete(event.id);
+            Alert.alert('Desapuntado', `Te has desapuntado de: ${event.name}`);
+        } else {
+            newJoinedEvents.add(event.id);
+            Alert.alert('Apuntado', `Te has apuntado a: ${event.name}`);
+        }
+        setJoinedEvents(newJoinedEvents);
     };
 
     const handleFactioPress = (event: Event) => {
         if (event.day === 'Jueves') {
+            // For Don Vito, the "Factio" button on Thursday might directly link to the "Ladies Night" or a dedicated dating feature if you have one.
+            // For now, it will link to the generic match page for that event ID.
             router.push(`/match/${event.id}`);
         }
     };
@@ -101,12 +118,6 @@ export default function EventosDeliriumScreen() {
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="#0d0d0d" />
-
-            {/* --- ELIMINADO: Barra de encabezado personalizada --- */}
-            {/* <View style={styles.headerBar}>
-                <Text style={styles.title}>Eventos Delirium</Text>
-            </View> */}
-            {/* --- FIN ELIMINADO --- */}
 
             <ScrollView contentContainerStyle={styles.scrollViewContent}>
                 {DAYS_OF_WEEK.map(day => {
@@ -120,46 +131,51 @@ export default function EventosDeliriumScreen() {
                         <View key={day} style={styles.daySection}>
                             <Text style={styles.dayTitle}>{day}</Text>
 
-                            {eventsToday.map(event => (
-                                <View key={event.id} style={styles.eventCard}>
-                                    <View style={styles.eventInfo}>
-                                        <Text style={styles.eventName}>{event.name}</Text>
-                                        {event.time && (
-                                            <Text style={styles.eventDetail}>
-                                                Hora: {event.time}
-                                            </Text>
-                                        )}
-                                        {event.entryPrice && (
-                                            <Text style={styles.eventDetail}>
-                                                Entrada: {event.entryPrice}
-                                            </Text>
-                                        )}
-                                        <Text style={styles.eventDescription}>{event.description}</Text>
-
-                                        <View style={styles.buttonRow}>
-                                            <TouchableOpacity
-                                                style={styles.joinButton}
-                                                onPress={() => handleJoinEvent(event)}
-                                            >
-                                                <Text style={styles.joinButtonText}>Apuntarse</Text>
-                                            </TouchableOpacity>
-
-                                            {event.day === 'Jueves' ? (
-                                                <TouchableOpacity
-                                                    style={styles.factioButton}
-                                                    onPress={() => handleFactioPress(event)}
-                                                >
-                                                    <Text style={styles.factioButtonText}>Factio</Text>
-                                                </TouchableOpacity>
-                                            ) : (
-                                                <View style={styles.factioPlaceholder}>
-                                                    <Text style={styles.factioPlaceholderText}>Próximamente...</Text>
-                                                </View>
+                            {eventsToday.map(event => {
+                                const isJoined = joinedEvents.has(event.id);
+                                return (
+                                    <View key={event.id} style={styles.eventCard}>
+                                        <View style={styles.eventInfo}>
+                                            <Text style={styles.eventName}>{event.name}</Text>
+                                            {event.time && (
+                                                <Text style={styles.eventDetail}>
+                                                    Hora: {event.time}
+                                                </Text>
                                             )}
+                                            {event.entryPrice && (
+                                                <Text style={styles.eventDetail}>
+                                                    Entrada: {event.entryPrice}
+                                                </Text>
+                                            )}
+                                            <Text style={styles.eventDescription}>{event.description}</Text>
+
+                                            <View style={styles.buttonRow}>
+                                                <TouchableOpacity
+                                                    style={isJoined ? styles.leaveButton : styles.joinButton}
+                                                    onPress={() => handleToggleJoinEvent(event)}
+                                                >
+                                                    <Text style={styles.joinButtonText}>
+                                                        {isJoined ? 'Desapuntarse' : 'Apuntarse'}
+                                                    </Text>
+                                                </TouchableOpacity>
+
+                                                {event.day === 'Jueves' ? (
+                                                    <TouchableOpacity
+                                                        style={styles.factioButton}
+                                                        onPress={() => handleFactioPress(event)}
+                                                    >
+                                                        <Text style={styles.factioButtonText}>Factio</Text>
+                                                    </TouchableOpacity>
+                                                ) : (
+                                                    <View style={styles.factioPlaceholder}>
+                                                        <Text style={styles.factioPlaceholderText}>Próximamente...</Text>
+                                                    </View>
+                                                )}
+                                            </View>
                                         </View>
                                     </View>
-                                </View>
-                            ))}
+                                );
+                            })}
                         </View>
                     );
                 })}
@@ -172,32 +188,8 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#0d0d0d',
-        // Mantener este padding top para el espacio de la barra de estado
         paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     },
-    // --- ELIMINADO: Estilo de la barra de encabezado personalizada ---
-    // headerBar: {
-    //     height: 60,
-    //     backgroundColor: '#1e1e1e',
-    //     flexDirection: 'row',
-    //     alignItems: 'center',
-    //     justifyContent: 'center',
-    //     paddingHorizontal: 15,
-    //     borderBottomWidth: 1,
-    //     borderBottomColor: '#2a2a2a',
-    //     elevation: 5,
-    //     shadowColor: '#000',
-    //     shadowOffset: { width: 0, height: 2 },
-    //     shadowOpacity: 0.25,
-    //     shadowRadius: 3.84,
-    // },
-    // --- ELIMINADO: Estilo del título personalizado ---
-    // title: {
-    //     color: '#fff',
-    //     fontSize: 20,
-    //     fontWeight: 'bold',
-    // },
-
     scrollViewContent: {
         padding: 15,
     },
@@ -254,7 +246,14 @@ const styles = StyleSheet.create({
         paddingHorizontal: 0,
     },
     joinButton: {
-        backgroundColor: '#f4524d',
+        backgroundColor: '#f4524d', // Red for "Apuntarse"
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 20,
+        marginRight: 10,
+    },
+    leaveButton: {
+        backgroundColor: '#888', // Grey for "Desapuntarse"
         paddingVertical: 10,
         paddingHorizontal: 20,
         borderRadius: 20,
