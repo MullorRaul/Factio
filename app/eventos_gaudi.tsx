@@ -34,15 +34,6 @@ const DELIRIUM_EVENTS: Event[] = [
         // entryPrice: 'Gratis hasta la 1:00h (con carné universitario)', // Removed
     },
     {
-        id: 'g-jue-2',
-        name: 'Remember The 90s & 00s',
-        description: 'Revive los clásicos del dance, pop y rock de los 90s y 2000s. ¡Una noche de pura nostalgia!',
-        day: 'Jueves',
-        photo: require('../assets/images/delirium.jpg'),
-        // time: '00:00h - 05:00h', // Removed
-        // entryPrice: '8€ con consumición', // Removed
-    },
-    {
         id: 'g-vie-1',
         name: 'Viernes Electrónico: Tech House Fusion',
         description: 'Line-up de DJs residentes y artistas invitados con lo último en tech house y deep house.',
@@ -136,7 +127,13 @@ export default function EventosDeliriumScreen() {
                     }
 
                     return (
-                        <View key={day} style={styles.daySection}>
+                        <View
+                            key={day}
+                            style={[
+                                styles.daySection,
+                                day === 'Jueves' && { marginTop: 30 } // Añadido para bajar la sección del jueves
+                            ]}
+                        >
                             <Text style={styles.dayTitle}>{day}</Text>
 
                             {eventsToday.map(event => {

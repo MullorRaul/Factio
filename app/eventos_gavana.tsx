@@ -126,7 +126,13 @@ export default function EventosDeliriumScreen() {
                     }
 
                     return (
-                        <View key={day} style={styles.daySection}>
+                        <View
+                            key={day}
+                            style={[
+                                styles.daySection,
+                                day === 'Jueves' && { marginTop: 30 } // Añadido para bajar la sección del jueves
+                            ]}
+                        >
                             <Text style={styles.dayTitle}>{day}</Text>
 
                             {eventsToday.map(event => {
