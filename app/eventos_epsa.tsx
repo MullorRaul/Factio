@@ -126,7 +126,13 @@ export default function EventosDeliriumScreen() {
                     }
 
                     return (
-                        <View key={day} style={styles.daySection}>
+                        <View
+                            key={day}
+                            style={[
+                                styles.daySection,
+                                day === 'Jueves' && { marginTop: 30 } // Añadido para bajar la sección del jueves
+                            ]}
+                        >
                             <Text style={styles.dayTitle}>{day}</Text>
 
                             {eventsToday.map(event => {
@@ -135,8 +141,7 @@ export default function EventosDeliriumScreen() {
                                     <View key={event.id} style={styles.eventCard}>
                                         <View style={styles.eventInfo}>
                                             <Text style={styles.eventName}>{event.name}</Text>
-                                            {/* Conditionally rendered time was here, now removed */}
-                                            {/* Conditionally rendered entryPrice was here, now removed */}
+                                            {/* 'time' and 'entryPrice' display are removed as per previous requests */}
                                             <Text style={styles.eventDescription}>{event.description}</Text>
 
                                             <View style={styles.buttonRow}>
