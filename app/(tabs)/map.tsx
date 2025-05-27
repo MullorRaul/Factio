@@ -50,6 +50,7 @@ const EVENT_DATA: Record<string, EventInfo> = {
 interface Friend   { id:string; name:string; gender:'M'|'F'; lat:number; lng:number }
 interface CrowdDot { id:string;  lat:number; lng:number }
 
+const puntos: Punto[] = pubs;
 const NAMES_F = ['Lucía','Noa','María','Paula','Sara','Vera','Eva','Lola','Julia','Nerea'];
 const NAMES_M = ['Hugo','Sergio','Álvaro','Leo','Pablo','Marc','Iñigo','Adrián','Ian','Gonzalo'];
 
@@ -189,7 +190,7 @@ export default function PantallaMapa(){
         <View style={styles.container}>
             {/* MAPA */}
             <MapView ref={mapRef} style={styles.map} provider={PROVIDER_GOOGLE} initialRegion={region} customMapStyle={mapaOscuro} showsUserLocation={true} showsMyLocationButton={false} rotateEnabled={false} onPanDrag={()=>{}}>
-                {pubsFiltrados.map(p=><Circle key={`c${p.id}`} center={{latitude:p.latitude,longitude:p.longitude}} radius={90} strokeWidth={0} fillColor="rgba(167,65,235,0.35)"/>)}
+                {pubsFiltrados.map(p=><Circle key={`c${p.id}`} center={{latitude:p.latitude,longitude:p.longitude}} radius={p.weight} strokeWidth={0} fillColor="rgba(167,65,235,0.35)"/>)}
                 {factioOn&&crowd.map(d=><Circle key={d.id} center={{latitude:d.lat,longitude:d.lng}} radius={Platform.OS==='ios'?15:20} strokeWidth={0} fillColor="rgba(255,105,180,0.15)"/>)}
 
                 {pubsFiltrados.map(p=><Marker key={`p${p.id}`} coordinate={{latitude:p.latitude,longitude:p.longitude}} onPress={()=>openDetail(p)}>
@@ -303,9 +304,9 @@ const styles=StyleSheet.create({
     balloon:{backgroundColor:'#8A2BE2',paddingHorizontal:12,paddingVertical:8,borderRadius:14,maxWidth:300,flexWrap:'wrap',alignSelf:'center'},
     balloonText:{color:'#fff',fontSize:13,flexWrap:'wrap'},
 
-    sheet:{position:'absolute',left:0,right:0,bottom:0,backgroundColor:'#222',borderTopLeftRadius:20,borderTopRightRadius:20,padding:16,paddingTop:48},
-    sheetClose:{position:'absolute',right:16,top:12,padding:4},
-    sheetImg:{width:'100%',height:180,borderRadius:12,marginBottom:12}, sheetTitle:{fontSize:22,fontWeight:'bold',color:'#fff'},
+    sheet:{position:'absolute',left:0,right:0,bottom:0,backgroundColor:'#222',borderTopLeftRadius:20,borderTopRightRadius:20,padding:16,paddingTop:42, height: height * 0.505, flexDirection:'column'},
+    sheetClose:{position:'absolute',right:16,top:12,padding:2},
+    sheetImg:{width:'100%',height:280,borderRadius:12,marginBottom:12}, sheetTitle:{fontSize:22,fontWeight:'bold',color:'#fff'},
     sheetAddr:{fontSize:14,color:'#ccc',marginBottom:6}, sheetDesc:{fontSize:14,color:'#aaa',marginBottom:12},
 
     evHeader:{color:'#e14eca',fontWeight:'bold',marginTop:6},
