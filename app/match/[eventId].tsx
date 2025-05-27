@@ -25,7 +25,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'; // Para ob
 const { width, height } = Dimensions.get('window');
 const SWIPE_THRESHOLD = width * 0.25; // Umbral para considerar un swipe completo
 const SWIPE_OUT_DURATION = 250; // Duración de la animación de salida
-const API_BASE_URL = 'https://307d-2a0c-5a82-c002-1600-5468-aff7-895-fea0.ngrok-free.app'; // Asegúrate de que es la URL correcta de tu backend
+const API_BASE_URL = 'https://e64d-2a0c-5a82-c201-2100-19ae-8cd2-77f2-647c.ngrok-free.app'; // Asegúrate de que es la URL correcta de tu backend
 const AUTH_TOKEN_KEY = 'userToken'; // Clave usada para guardar el token
 
 // Definir la interfaz de los participantes basada en lo que retorna tu backend

@@ -13,7 +13,7 @@ import * as ImagePicker from 'expo-image-picker';
 
 // Define la URL base de tu backend
 // ¡CAMBIA ESTO POR LA URL DE TU SERVIDOR DE PRODUCCIÓN CUANDO DESPLIEGUES!
-const API_BASE_URL = 'https://307d-2a0c-5a82-c002-1600-5468-aff7-895-fea0.ngrok-free.app'; // <-- Asegúrate de que esta IP es accesible
+const API_BASE_URL = 'https://e64d-2a0c-5a82-c201-2100-19ae-8cd2-77f2-647c.ngrok-free.app'; // <-- Asegúrate de que esta IP es accesible
 
 export default function SignUpScreen() {
     const router = useRouter();
