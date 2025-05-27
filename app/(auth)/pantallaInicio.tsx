@@ -1,4 +1,4 @@
-// app/index.tsx
+// app/pantallaInicio.tsx
 import React from 'react';
 import {
     View,

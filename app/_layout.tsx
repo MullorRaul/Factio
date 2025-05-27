@@ -15,6 +15,9 @@ export default function RootLayout() {
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
             <Stack>
+                {/* ➕ DECLARA TU PANTALLA DE INICIO AQUÍ */}
+                <Stack.Screen name="pantallaInicio" options={{ headerShown: false }} />
+
                 {/* Tabs principales y autenticación */}
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="(auth)" options={{ headerShown: false }} />
