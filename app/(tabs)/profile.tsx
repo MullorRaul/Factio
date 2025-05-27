@@ -1,5 +1,6 @@
 // app/(tabs)/profile.tsx
 import React, { useState, useEffect } from 'react';
+
 import {
     View,
     Text,
@@ -250,6 +251,18 @@ export default function ProfileScreen() {
     const handleSave = async () => {
         setIsSaving(true);
         setError(null);
+        if (!username.trim()) {
+            Alert.alert('Error', 'Por favor, introduce un nombre de usuario.');
+            setIsSaving(false);
+            return;
+        }
+
+        const trimmedEmail = email.trim();
+        if (!trimmedEmail) {
+            Alert.alert('Error', 'Por favor, introduce un email.');
+            setIsSaving(false);
+            return;
+        }
 
         const emailRegex = /^\S+@\S+\.\S+$/;
         if (email && !emailRegex.test(email)) {
@@ -515,7 +528,7 @@ export default function ProfileScreen() {
 
 
                     {/* Editable Fields (Conditionally rendered) */}
-                    {isEditing && (
+                    {isEditing ? (
                         <View>
                             {/* Campos de texto y selección */}
                             <Text style={styles.label}>Username:</Text>
@@ -615,6 +628,24 @@ export default function ProfileScreen() {
                                     <Text style={styles.saveButtonText}>Guardar Cambios</Text>
                                 )}
                             </TouchableOpacity>
+                        </View>
+                    ) : (
+                        // Non-editable display of user information
+                        <View>
+                            <Text style={styles.label}>Email:</Text>
+                            <Text style={styles.displayValue}>{email || 'No especificado'}</Text>
+
+                            <Text style={styles.label}>Edad:</Text>
+                            <Text style={styles.displayValue}>{edad || 'No especificada'}</Text>
+
+                            <Text style={styles.label}>Género:</Text>
+                            <Text style={styles.displayValue}>{genero || 'No especificado'}</Text>
+
+                            <Text style={styles.label}>Estudios/Trabajo:</Text>
+                            <Text style={styles.displayValue}>{estudiosTrabajo || 'No especificado'}</Text>
+
+                            <Text style={styles.label}>Orientación Sexual:</Text>
+                            <Text style={styles.displayValue}>{orientacionSexual || 'No especificada'}</Text>
                         </View>
                     )}
 
@@ -740,13 +771,16 @@ const styles = StyleSheet.create({
         height: '100%',
         resizeMode: 'cover',
     },
-    cameraIcon: {
+    cameraIcon: { // MODIFICADO PARA CENTRAR
         position: 'absolute',
-        bottom: 5,
-        right: 5,
+        left: '50%',
+        top: '50%',
+        transform: [{ translateX: -17 }, { translateY: -17 }],
         backgroundColor: '#e14eca',
-        borderRadius: 15,
+        borderRadius: 17,
         padding: 5,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     removePhotoButton: {
         alignSelf: 'center',
@@ -830,5 +864,16 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 18,
         fontWeight: 'bold',
+    },
+    displayValue: { // New style for displaying non-editable text
+        backgroundColor: '#282828', // Slightly darker background for display
+        color: '#fff',
+        borderRadius: 8,
+        paddingHorizontal: 15,
+        paddingVertical: 12,
+        fontSize: 16,
+        borderWidth: 1,
+        borderColor: '#444',
+        marginBottom: 10, // Space between display values
     },
 });
