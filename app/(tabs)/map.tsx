@@ -153,7 +153,7 @@ export default function PantallaMapa(){
     return(
         <View style={styles.container}>
             {/* MAPA */}
-            <MapView ref={mapRef} style={styles.map} provider={PROVIDER_GOOGLE} initialRegion={region} customMapStyle={mapaOscuro} showsUserLocation rotateEnabled={false} onPanDrag={()=>{}}>
+            <MapView ref={mapRef} style={styles.map} provider={PROVIDER_GOOGLE} initialRegion={region} customMapStyle={mapaOscuro} showsUserLocation={true} showsMyLocationButton={false} rotateEnabled={false} onPanDrag={()=>{}}>
                 {pubsFiltrados.map(p=><Circle key={`c${p.id}`} center={{latitude:p.latitude,longitude:p.longitude}} radius={90} strokeWidth={0} fillColor="rgba(167,65,235,0.35)"/>)}
                 {factioOn&&crowd.map(d=><Circle key={d.id} center={{latitude:d.lat,longitude:d.lng}} radius={Platform.OS==='ios'?15:20} strokeWidth={0} fillColor="rgba(255,105,180,0.15)"/>)}
 
