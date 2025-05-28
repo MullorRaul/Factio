@@ -107,12 +107,6 @@ export default function EventosDeliriumScreen() {
         setJoinedEvents(newJoinedEvents);
     };
 
-    const handleFactioPress = (event: Event) => {
-        if (event.day === 'Jueves') {
-            router.push(`/match/${event.id}`);
-        }
-    };
-
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="#0d0d0d" />
@@ -130,7 +124,7 @@ export default function EventosDeliriumScreen() {
                             key={day}
                             style={[
                                 styles.daySection,
-                                day === 'Jueves' && { marginTop: 30 } // Añadido para bajar la sección del jueves
+                                day === 'Jueves' && { marginTop: 30 }
                             ]}
                         >
                             <Text style={styles.dayTitle}>{day}</Text>
@@ -141,7 +135,6 @@ export default function EventosDeliriumScreen() {
                                     <View key={event.id} style={styles.eventCard}>
                                         <View style={styles.eventInfo}>
                                             <Text style={styles.eventName}>{event.name}</Text>
-                                            {/* 'time' and 'entryPrice' display are removed as per previous requests */}
                                             <Text style={styles.eventDescription}>{event.description}</Text>
 
                                             <View style={styles.buttonRow}>
@@ -153,19 +146,6 @@ export default function EventosDeliriumScreen() {
                                                         {isJoined ? 'Desapuntarse' : 'Apuntarse'}
                                                     </Text>
                                                 </TouchableOpacity>
-
-                                                {event.day === 'Jueves' ? (
-                                                    <TouchableOpacity
-                                                        style={styles.factioButton}
-                                                        onPress={() => handleFactioPress(event)}
-                                                    >
-                                                        <Text style={styles.factioButtonText}>Factio</Text>
-                                                    </TouchableOpacity>
-                                                ) : (
-                                                    <View style={styles.factioPlaceholder}>
-                                                        <Text style={styles.factioPlaceholderText}>Próximamente...</Text>
-                                                    </View>
-                                                )}
                                             </View>
                                         </View>
                                     </View>
@@ -220,7 +200,7 @@ const styles = StyleSheet.create({
         color: '#fff',
         marginBottom: 5,
     },
-    eventDetail: { // This style is now unused but kept for reference if needed
+    eventDetail: {
         fontSize: 14,
         color: '#aaa',
         marginBottom: 3,
@@ -241,14 +221,14 @@ const styles = StyleSheet.create({
         paddingHorizontal: 0,
     },
     joinButton: {
-        backgroundColor: '#f4524d', // Red for "Apuntarse"
+        backgroundColor: '#f4524d',
         paddingVertical: 10,
         paddingHorizontal: 20,
         borderRadius: 20,
         marginRight: 10,
     },
     leaveButton: {
-        backgroundColor: '#888', // Grey for "Desapuntarse"
+        backgroundColor: '#888',
         paddingVertical: 10,
         paddingHorizontal: 20,
         borderRadius: 20,
@@ -256,26 +236,6 @@ const styles = StyleSheet.create({
     },
     joinButtonText: {
         color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    factioButton: {
-        backgroundColor: '#5a287d',
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 20,
-    },
-    factioButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    factioPlaceholder: {
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-    },
-    factioPlaceholderText: {
-        color: '#888',
         fontSize: 16,
         fontWeight: 'bold',
     },
