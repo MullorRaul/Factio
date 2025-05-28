@@ -13,7 +13,7 @@ import { Link, useRouter } from 'expo-router';
 
 // Define la URL base de tu backend
 // ¡CAMBIA ESTO POR LA URL DE TU SERVIDOR DE PRODUCCIÓN CUANDO DESPLIEGUES!
-const API_BASE_URL = 'https://e64d-2a0c-5a82-c201-2100-19ae-8cd2-77f2-647c.ngrok-free.app'; // <-- Asegúrate de que esta IP es accesible
+const API_BASE_URL = 'https://d416-2a0c-5a82-c201-2100-5d1c-12c5-975a-a800.ngrok-free.app'; // <-- Asegúrate de que esta IP es accesible
 
 export default function SignUpScreen() {
     const router = useRouter();

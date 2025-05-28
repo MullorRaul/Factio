@@ -637,9 +637,7 @@ export default function MatchScreen() {
         if (direction === 'right') {
             setShowMatchIcon(true);
             Animated.sequence([
-                Animated.timing(matchAnim, { toValue: 1, duration: 300, useNativeDriver: true }), // useNativeDriver: true for opacity
-                Animated.delay(500),
-                Animated.timing(matchAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+
             ]).start(() => {
                 setShowMatchIcon(false);
                 // Common logic after animation completes

@@ -8,10 +8,12 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import AnimatedBackground from '../components/AnimatedBackground';
+
 
 // Define la URL base de tu backend
 // ¡CAMBIA ESTO POR LA URL DE TU SERVIDOR DE PRODUCCIÓN CUANDO DESPLIEGUES!
-const API_BASE_URL = 'https://e64d-2a0c-5a82-c201-2100-19ae-8cd2-77f2-647c.ngrok-free.app'; // <-- Asegúrate de que esta IP es accesible desde tu dispositivo/simulador
+const API_BASE_URL = 'https://d416-2a0c-5a82-c201-2100-5d1c-12c5-975a-a800.ngrok-free.app'; // <-- Asegúrate de que esta IP es accesible desde tu dispositivo/simulador
 
 // Define la clave para AsyncStorage
 const AUTH_TOKEN_KEY = 'userToken'; // Clave para guardar el token JWT
@@ -81,6 +83,7 @@ export default function LoginScreen() {
 
     return (
         <View style={styles.container}>
+            <AnimatedBackground />
             <StatusBar style="light" />
             <Text style={styles.title}>Iniciar Sesión</Text>
 
@@ -235,4 +238,13 @@ const styles = StyleSheet.create({
         color: '#e14eca',
         fontSize: 16,
     },
+    contentWrapper: {
+        flex: 1,
+        width: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 20,
+        zIndex: 1, // Muy importante para que el contenido esté por encima del fondo animado
+    },
+
 });

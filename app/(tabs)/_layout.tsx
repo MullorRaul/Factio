@@ -18,7 +18,7 @@ import {LogBox} from "react-native"; // Keep AsyncStorage for constants
 // Define la URL base de tu backend (Still needed for other potential uses or just as a constant)
 // ¡CAMBIA ESTO POR LA URL DE TU SERVIDOR DE PRODUCCIÓN CUANDO DESPLIEGUES!
 // Asegúrate de que esta IP es accesible desde tu dispositivo/simulador
-const API_BASE_URL = 'https://e64d-2a0c-5a82-c201-2100-19ae-8cd2-77f2-647c.ngrok-free.app'; // <-- Usar la misma URL que en otras pantallas
+const API_BASE_URL = 'https://d416-2a0c-5a82-c201-2100-5d1c-12c5-975a-a800.ngrok-free.app'; // <-- Usar la misma URL que en otras pantallas
 
 // Define la clave para AsyncStorage (Still needed as a constant)
 const AUTH_TOKEN_KEY = 'userToken'; // Clave para guardar el token JWT

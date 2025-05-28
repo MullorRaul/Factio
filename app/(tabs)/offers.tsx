@@ -20,7 +20,7 @@ const { height, width } = Dimensions.get('window');
 const TAB_BAR_HEIGHT = 60;
 const AUTO_SCROLL_DURATION = 13000;
 
-const API_BASE_URL = 'https://e64d-2a0c-5a82-c201-2100-19ae-8cd2-77f2-647c.ngrok-free.app';
+const API_BASE_URL = 'https://d416-2a0c-5a82-c201-2100-5d1c-12c5-975a-a800.ngrok-free.app';
 const AUTH_TOKEN_KEY = 'userToken';
 
 

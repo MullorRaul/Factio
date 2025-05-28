@@ -304,7 +304,7 @@ const styles=StyleSheet.create({
     balloon:{backgroundColor:'#8A2BE2',paddingHorizontal:12,paddingVertical:8,borderRadius:14,maxWidth:300,flexWrap:'wrap',alignSelf:'center'},
     balloonText:{color:'#fff',fontSize:13,flexWrap:'wrap'},
 
-    sheet:{position:'absolute',left:0,right:0,bottom:0,backgroundColor:'#222',borderTopLeftRadius:20,borderTopRightRadius:20,padding:16,paddingTop:42, height: height * 0.505, flexDirection:'column'},
+    sheet:{position:'absolute',left:0,right:0,bottom:0,backgroundColor:'#222',borderTopLeftRadius:20,borderTopRightRadius:20,padding:16,paddingTop:42, height: height * 0.55, flexDirection:'column'},
     sheetClose:{position:'absolute',right:16,top:12,padding:2},
     sheetImg:{width:'100%',height:280,borderRadius:12,marginBottom:12}, sheetTitle:{fontSize:22,fontWeight:'bold',color:'#fff'},
     sheetAddr:{fontSize:14,color:'#ccc',marginBottom:6}, sheetDesc:{fontSize:14,color:'#aaa',marginBottom:12},

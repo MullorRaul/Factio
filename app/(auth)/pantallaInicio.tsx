@@ -1,56 +1,62 @@
 // app/pantallaInicio.tsx
+// Modificado para incluir AnimatedBackground
 import React from 'react';
 import {
     View,
     Text,
     TouchableOpacity,
     StyleSheet,
-    Alert, // Para la funcionalidad temporal del botón
+    Dimensions
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar'; // Para controlar el estilo de la barra de estado
+import { StatusBar } from 'expo-status-bar';
+// Asegúrate que la ruta al componente AnimatedBackground sea correcta
+// Si creaste una carpeta 'components' dentro de 'app':
+import AnimatedBackground from '../components/AnimatedBackground';
+// Si AnimatedBackground.tsx está en la misma carpeta 'app':
+// import AnimatedBackground from './AnimatedBackground';
+
 
 export default function SplashScreen() {
     const router = useRouter();
 
     const handleNavigateToLogin = () => {
-        // Por ahora, solo una alerta.
-        // Alert.alert(
-        //     'Próximamente',
-        //     'Este botón te llevará a la pantalla de inicio de sesión.'
-        // );
-
-        // Cuando estés listo, descomenta esta línea para navegar al login:
-        router.push('/login'); // Asume que tu ruta de login está en (auth)/login.tsx
-                               // Expo Router manejará el grupo (auth) automáticamente.
+        router.push('/login'); // Asume que tu ruta de login es (auth)/login.tsx
     };
 
     return (
         <View style={styles.container}>
+            {/* El fondo animado se renderiza primero para estar detrás de otros elementos */}
+            <AnimatedBackground />
+
             <StatusBar style="light" backgroundColor="#0d0d0d" />
 
-            <View style={styles.content}>
-                <Text style={styles.companyName}>Factio</Text>
-                <Text style={styles.slogan}>aquí empieza y acaba la empresa</Text>
-                {/* Alternativa de eslogan más "fiestera": */}
-                {/* <Text style={styles.slogan}>donde tu noche toma forma</Text> */}
-                {/* <Text style={styles.slogan}>la fiesta empieza aquí</Text> */}
-            </View>
+            {/* Contenedor para el contenido principal (logo, eslogan, botón) */}
+            {/* Esto asegura que el contenido esté por encima del fondo y bien distribuido */}
+            <View style={styles.mainContentContainer}>
+                <View style={styles.content}>
+                    <Text style={styles.companyName}>Factio</Text>
+                    <View style={{ height: 10}} />
+                    <Text style={styles.slogan}>"¿Dónde está la fiesta? Aquí lo sabes"</Text>
+                    <View style={{ height: 40 }} />
+                </View>
 
-            <LinearGradient
-                colors={['#e14eca', '#9e6fca']} // Mismos colores que en login/signup
-                style={styles.buttonGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-            >
-                <TouchableOpacity
-                    style={styles.button}
-                    onPress={handleNavigateToLogin}
+                <LinearGradient
+                    colors={['#e14eca', '#9e6fca']} // Degradado para el botón
+                    style={styles.buttonGradient}
+                    start={{ x: 0, y: 0 }} // Dirección del degradado
+                    end={{ x: 1, y: 1 }}
                 >
-                    <Text style={styles.buttonText}>Comenzar Aventura</Text>
-                </TouchableOpacity>
-            </LinearGradient>
+                    <TouchableOpacity
+                        style={styles.button}
+                        onPress={handleNavigateToLogin}
+                        activeOpacity={0.8} // Feedback visual al presionar
+                    >
+                        <Text style={styles.buttonText}>Comenza la Fiesta</Text>
+                    </TouchableOpacity>
+                </LinearGradient>
+            </View>
         </View>
     );
 }
@@ -58,48 +64,50 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0d0d0d', // Fondo oscuro principal de tu app
+        backgroundColor: '#0d0d0d',
+    },
+    mainContentContainer: {
+        flex: 1,
         alignItems: 'center',
-        justifyContent: 'space-around', // Distribuye el contenido (logo/eslogan arriba, botón abajo)
+        justifyContent: 'center', // Centramos verticalmente todo el contenido
         paddingHorizontal: 20,
-        paddingVertical: 50, // Más padding vertical para espaciar
+        zIndex: 1,
     },
     content: {
-        alignItems: 'center', // Centra el nombre y eslogan
-        // Podrías añadir un logo gráfico aquí encima del nombre si quieres
+        alignItems: 'center',
+        marginBottom: 0, // Espacio entre texto y botón
     },
     companyName: {
-        fontSize: 72, // Muy grande y llamativo
+        fontSize: 80,
         fontWeight: 'bold',
-        color: '#e14eca', // Color principal de tu marca (el rosa/púrpura del degradado)
-        // Sombra para un efecto "atrevido"
-        textShadowColor: 'rgba(225, 78, 202, 0.5)',
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 15,
+        color: '#e14eca',
+        textShadowColor: 'rgba(225, 78, 202, 0.7)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 20,
         marginBottom: 10,
     },
     slogan: {
         fontSize: 18,
-        color: '#b0b0b0', // Un gris claro, legible pero no compite con el nombre
+        color: '#b0b0b0',
         textAlign: 'center',
-        fontStyle: 'italic', // Un toque de estilo
-        maxWidth: '80%', // Para que no se extienda demasiado en pantallas anchas
+        fontStyle: 'italic',
+        maxWidth: '85%',
     },
     buttonGradient: {
-        width: '90%', // Ancho del botón
-        borderRadius: 30, // Bordes bien redondeados para un look moderno
-        // Sombra para el botón
+        marginTop: 70,
+        width: '90%',
+        borderRadius: 30,
         shadowColor: '#e14eca',
         shadowOffset: {
             width: 0,
-            height: 4,
+            height: 6,
         },
-        shadowOpacity: 0.3,
-        shadowRadius: 5,
-        elevation: 8, // Para Android
+        shadowOpacity: 0.35,
+        shadowRadius: 8,
+        elevation: 10,
     },
     button: {
-        paddingVertical: 18, // Botón más "alto"
+        paddingVertical: 18,
         alignItems: 'center',
         justifyContent: 'center',
     },
