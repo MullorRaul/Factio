@@ -1,5 +1,5 @@
 // app/(tabs)/offers.tsx
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     View,
     Text,
@@ -7,153 +7,389 @@ import {
     Dimensions,
     FlatList,
     ImageBackground,
-    TouchableOpacity, // Keep if you have other touchables, remove if only for the old "back"
+    TouchableOpacity,
+    ActivityIndicator,
+    Animated,
+    StatusBar,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router'; // Still useful for other navigation if needed
+import { useRouter } from 'expo-router';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { height, width } = Dimensions.get('window');
+const TAB_BAR_HEIGHT = 60;
+const AUTO_SCROLL_DURATION = 13000;
 
-interface PubAd {
-    id: string;
-    image: any;
-    name: string;
-    price?: string;
-    offers?: string;
-    location: string;
-    musicType: string;
-    entryPrice?: string;
-}
+const API_BASE_URL = 'https://d416-2a0c-5a82-c201-2100-5d1c-12c5-975a-a800.ngrok-free.app';
+const AUTH_TOKEN_KEY = 'userToken';
 
-const DATA: PubAd[] = [
-    {
-        id: '1',
-        // Assuming assets folder is at the root of your project (e.g., my-app/assets)
-        // If offers.tsx was in app/, path was ../assets. Now from app/(tabs)/, it's ../../assets
-        image: require('../../assets/images/delirium.jpg'),
-        name: 'Pub Delirium',
-        price: '3€ cerveza',
-        offers: '2x1 hasta las 12',
-        location: 'Centro Alcoy',
-        musicType: 'Rock',
-        entryPrice: 'Gratis',
-    },
-    {
-        id: '2',
-        image: require('../../assets/images/Gaudi.jpg'),
-        name: 'Gaudi',
-        price: '5€ copa',
-        offers: 'Happy Hour 4–6am',
-        location: 'Polígono',
-        musicType: 'Electrónica',
-        entryPrice: '5€ con copa',
-    },
-    // más pubs...
+
+const CAFE_IMAGE = require('../../assets/images/cafe.jpg'); // Verifica esta ruta
+const DELIRIUM_IMAGE = require('../../assets/images/delirium.jpg'); // Verifica esta ruta
+const DON_VITO_IMAGE = require('../../assets/images/don_vito.jpeg'); // Verifica esta ruta
+const GAUDI_IMAGE = require('../../assets/images/Gaudi.jpg'); // Verifica esta ruta y la capitalización
+const GAVANA_IMAGE = require('../../assets/images/gavana.jpg'); // Verifica esta ruta
+
+// --- Crea un array con las imágenes importadas en el orden deseado ---
+const LOCAL_IMAGES_LIST_SEQUENTIAL = [
+    CAFE_IMAGE,       // Asignada al 1er evento
+    DELIRIUM_IMAGE,   // Asignada al 2do evento
+    GAUDI_IMAGE,      // Asignada al 3er evento (cambiado el orden según tu petición)
+    DON_VITO_IMAGE,   // Asignada al 4to evento (cambiado el orden según tu petición)
+    GAVANA_IMAGE,     // Asignada al 5to evento (cambiado el orden según tu petición)
 ];
 
-export default function OffersScreen() { // Renamed from PubReelScreen
-    const router = useRouter(); // Keep for potential future internal navigation
+// Define la interfaz para los datos de evento que vienen del backend
+interface BackendEvent {
+    cod_evento: number;
+    nombre: string;
+    hora_inicio: string;
+    hora_finalizacion: string;
+    descripcion: string;
+    imagen_url: string; // La mantenemos en la interfaz, aunque no la usaremos para mostrar
+    nombre_local: string;
+    aforo: number;
+    hombres_dentro: number;
+    mujeres_dentro: number;
+    // Añadiremos una propiedad para la imagen local asignada
+    localImageSource?: any; // require() devuelve un número/objeto, usamos 'any' o 'number'
+}
 
-    const renderItem = ({ item }: { item: PubAd }) => (
-        <View style={styles.cardContainer}>
-            <ImageBackground
-                source={item.image}
-                style={styles.imageBackground}
-                resizeMode="cover" // Good practice for background images
-            >
-                <LinearGradient
-                    colors={['transparent', 'rgba(0,0,0,0.8)']}
-                    style={styles.gradientOverlay}
-                />
-                <View style={styles.infoContainer}>
-                    <Text style={styles.pubName}>{item.name}</Text>
-                    <Text style={styles.pubDetail}>{item.location} • {item.musicType}</Text>
-                    {item.price && <Text style={styles.pubDetail}>Precio bebida: {item.price}</Text>}
-                    {item.offers && <Text style={styles.offerText}>{item.offers}</Text>}
-                    {item.entryPrice && <Text style={styles.pubDetail}>Entrada: {item.entryPrice}</Text>}
-                    {/* The 'Volver' button might not be needed here if navigation is handled by tabs
-                        If you keep it, ensure its behavior makes sense in the tab context.
-                    <TouchableOpacity
-                        style={styles.backButton}
-                        onPress={() => router.back()} // This would navigate back in the stack, if any
-                    >
-                        <Text style={styles.backButtonText}>Volver</Text>
-                    </TouchableOpacity>
-                    */}
-                </View>
-            </ImageBackground>
-        </View>
-    );
 
+export default function OffersScreen() {
+    const router = useRouter();
+    // El estado ahora almacenará objetos BackendEvent con una propiedad adicional
+    const [reels, setReels] = useState<BackendEvent[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const scrollRef = useRef<FlatList<BackendEvent>>(null);
+    const timer = useRef(new Animated.Value(0)).current;
+    const [currentIndex, setCurrentIndex] = useState(0);
+
+    // Guardamos la cantidad original de eventos para referencia
+    const originalReelCount = useRef(0);
+
+
+    // Efecto para cargar los eventos desde el backend
+    useEffect(() => {
+        const fetchEvents = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
+                console.log('DEBUG: Attempting to fetch events from:', `${API_BASE_URL}/api/eventos/proximos`);
+                console.log('DEBUG: Using token:', token ? 'Token Found' : 'No Token Found');
+
+                if (!token) {
+                    console.warn('DEBUG: No token found. User may not be logged in.');
+                    setError('No autenticado. Por favor, inicia sesión.');
+                    setLoading(false);
+                    return;
+                }
+
+                const response = await fetch(`${API_BASE_URL}/api/eventos/proximos`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                    },
+                });
+
+                console.log('DEBUG: Fetch events response status:', response.status);
+
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    console.error('API Error fetching events (Status:', response.status, '):', errorData);
+                    try {
+                        const errorJson = JSON.parse(errorData);
+                        setError(errorJson.error || 'Error al cargar eventos.');
+                    } catch {
+                        setError('Error al cargar eventos: ' + errorData);
+                    }
+                    if (response.status === 401) {
+                        console.warn('DEBUG: Token inválido o expirado. Eliminando token y redirigiendo al login.');
+                        await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
+                        setError('Sesión expirada. Por favor, inicia sesión de nuevo.');
+                    }
+                    setLoading(false);
+                    return;
+                }
+
+                const data: BackendEvent[] = await response.json();
+                console.log('DEBUG: Fetch events raw response text:', JSON.stringify(data));
+
+                // Si no hay datos, manejarlo antes de intentar duplicar
+                if (data.length === 0) {
+                    setReels([]);
+                    setLoading(false);
+                    return;
+                }
+
+                // --- MODIFICACIÓN CLAVE PARA SCROLL INFINITO (DUPLICACIÓN) ---
+                originalReelCount.current = data.length; // Guardar la cantidad original
+
+                // Determine cuántas veces duplicar para llegar a 50-80 eventos
+                let duplicationFactor = 1;
+                if (originalReelCount.current > 0) {
+                    duplicationFactor = Math.ceil(50 / originalReelCount.current);
+                    if (originalReelCount.current * duplicationFactor < 80) {
+                        duplicationFactor = Math.ceil(80 / originalReelCount.current);
+                    }
+                }
+                // Aseguramos que al menos se duplique 3 veces para un buen efecto de bucle
+                duplicationFactor = Math.max(duplicationFactor, 3);
+
+
+                let duplicatedData: BackendEvent[] = [];
+                for (let i = 0; i < duplicationFactor; i++) {
+                    duplicatedData = duplicatedData.concat(data);
+                }
+
+                const dataWithLocalImages = duplicatedData.map((event, index) => {
+                    const imageIndex = index % LOCAL_IMAGES_LIST_SEQUENTIAL.length;
+                    const assignedImageSource = LOCAL_IMAGES_LIST_SEQUENTIAL[imageIndex];
+                    return { ...event, localImageSource: assignedImageSource };
+                });
+
+                console.log(`DEBUG: Eventos originales: ${originalReelCount.current}. Duplicados ${duplicationFactor} veces. Total de eventos en la lista: ${dataWithLocalImages.length}`);
+
+                setReels(dataWithLocalImages);
+                setLoading(false);
+
+                // --- FIN MODIFICACIÓN ---
+
+            } catch (err: any) {
+                console.error('Error fetching events:', err);
+                setError('Error de conexión al cargar eventos: ' + err.message);
+                setLoading(false);
+            }
+        };
+
+        fetchEvents();
+
+        return () => {};
+
+    }, []);
+
+
+    // Efecto para el timer y auto-scroll
+    useEffect(() => {
+        if (reels.length > 0) {
+            timer.setValue(0);
+            Animated.timing(timer, {
+                toValue: width,
+                duration: AUTO_SCROLL_DURATION,
+                useNativeDriver: false,
+            }).start(({ finished }) => {
+                if (finished) {
+                    const nextIndex = currentIndex + 1;
+                    if (nextIndex < reels.length) {
+                        scrollRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+                    } else {
+                        // Si llegamos al final de la lista duplicada, saltamos "invisiblemente"
+                        // a un punto intermedio para que el bucle parezca infinito.
+                        // Calculamos el índice para saltar al inicio de la segunda "copia" original
+                        // Es importante que este salto no sea animado.
+                        const resetIndex = originalReelCount.current;
+                        if (resetIndex < reels.length) { // Asegura que el índice de reseteo sea válido
+                            scrollRef.current?.scrollToIndex({ index: resetIndex, animated: false });
+                            setCurrentIndex(resetIndex);
+                        }
+                    }
+                }
+            });
+        } else {
+            timer.stopAnimation();
+            timer.setValue(0);
+        }
+    }, [currentIndex, reels.length, timer]);
+
+    const onViewRef = useRef(({ viewableItems }: any) => {
+        if (viewableItems.length > 0) {
+            const newIndex = viewableItems[0].index;
+            if (newIndex !== currentIndex) {
+                setCurrentIndex(newIndex);
+            }
+
+            // Lógica para el bucle en el scroll manual
+            // Si el usuario se acerca al final de la lista duplicada
+            if (originalReelCount.current > 0) {
+                const thresholdToEnd = reels.length - originalReelCount.current; // Punto donde empieza la última copia
+                if (newIndex >= thresholdToEnd) {
+                    // Volver a la misma posición relativa en la primera copia
+                    const resetIndex = newIndex - originalReelCount.current;
+                    if (resetIndex >= 0 && resetIndex < reels.length) { // Asegura que el índice sea válido
+                        scrollRef.current?.scrollToIndex({ index: resetIndex, animated: false });
+                        setCurrentIndex(resetIndex);
+                    }
+                }
+                // Si el usuario se acerca al principio de la lista duplicada (yendo hacia arriba)
+                else if (newIndex < originalReelCount.current / 2 && newIndex > 0) { // Cerca del inicio de la primera copia
+                    // Saltamos a la misma posición relativa en la penúltima copia
+                    const resetIndex = newIndex + originalReelCount.current * (duplicationFactor - 2); // Ajusta la penúltima
+                    if (resetIndex >= 0 && resetIndex < reels.length) {
+                        scrollRef.current?.scrollToIndex({ index: resetIndex, animated: false });
+                        setCurrentIndex(resetIndex);
+                    }
+                }
+            }
+        }
+    });
+    const viewConfigRef = useRef({ viewAreaCoveragePercentThreshold: 50 });
+
+
+    // Función para renderizar cada evento - Usa la imagen local asignada secuencialmente
+    const renderReel = ({ item }: { item: BackendEvent }) => {
+        // Cálculos para las barras basados en los datos del backend (sin cambios)
+        const occupied = item.hombres_dentro + item.mujeres_dentro;
+        const totalAforo = item.aforo;
+        const aforoPercent = totalAforo > 0 ? (occupied / totalAforo) * 100 : 0;
+
+        const totalGenderCount = item.hombres_dentro + item.mujeres_dentro;
+        const maleRatio = totalGenderCount > 0 ? (item.hombres_dentro / totalGenderCount) * 100 : 0;
+        const femaleRatio = totalGenderCount > 0 ? (item.mujeres_dentro / totalGenderCount) * 100 : 0;
+
+        // Formatear la fecha (sin cambios)
+        const startDate = new Date(item.hora_inicio);
+        const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+        const formattedDate = startDate.toLocaleDateString(undefined, options);
+
+        return (
+            <View style={styles.cardContainer}>
+                <ImageBackground source={item.localImageSource} style={styles.imageBackground}>
+                    <View style={styles.overlay} />
+
+                    <View style={styles.infoContainer}>
+                        <Text style={styles.title}>{item.nombre_local || item.nombre}</Text>
+                        {item.nombre_local && item.nombre !== item.nombre_local && (
+                            <Text style={styles.subtitle}>{item.nombre}</Text>
+                        )}
+                        <Text style={styles.subtitle}>{formattedDate}</Text>
+
+                        <View style={styles.statRow}>
+                            <MaterialCommunityIcons name="account-group" size={20} color="#aaa" />
+                            <Text style={styles.statText}>{occupied}/{totalAforo}</Text>
+                        </View>
+                        {totalAforo > 0 && (
+                            <View style={styles.barBackground}><View style={[styles.barFill, { width: `${aforoPercent}%` }]} /></View>
+                        )}
+
+                        <View style={styles.statRow}>
+                            <MaterialCommunityIcons name="gender-male" size={20} color="#4ea8de" />
+                            <Text style={styles.statText}>{maleRatio.toFixed(0)}%</Text>
+                            <MaterialCommunityIcons name="gender-female" size={20} color="#de4eae" style={{ marginLeft:20 }} />
+                            <Text style={styles.statText}>{femaleRatio.toFixed(0)}%</Text>
+                        </View>
+                        {totalGenderCount > 0 && (
+                            <View style={styles.barBackground}>
+                                <View style={[styles.barFillMale,{width:`${maleRatio}%`}]} />
+                                <View style={[styles.barFillFemale,{width:`${femaleRatio}%`}]} />
+                            </View>
+                        )}
+
+                        {item.descripcion && (
+                            <Text style={styles.detail}>ℹ️ {item.descripcion}</Text>
+                        )}
+
+                        {/* Botones (sin cambios) */}
+                        <View style={styles.actionRow}>
+                            <TouchableOpacity style={styles.mapButton} onPress={()=>{
+                                // Lógica para ir al mapa
+                            }}>
+                                <MaterialCommunityIcons name="map-marker-radius" size={20} color="#aaa" />
+                                <Text style={styles.buttonText}>Cómo llegar</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.factioButton} onPress={() => {
+                                router.push({
+                                    pathname: '/match/[eventId]',
+                                    params: { eventId: item.cod_evento }
+                                });
+                            }}>
+                                <Text style={styles.buttonText}>Factio 🔥</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
+                    {/* Timer (sin cambios) */}
+
+                </ImageBackground>
+            </View>
+        );
+    };
+
+    // Mostrar indicador de carga o error (sin cambios)
+    if (loading) {
+        return (
+            <View style={styles.centered}>
+                <ActivityIndicator size="large" color="#e14eca"/>
+                <Text style={{color: '#ccc', marginTop: 10}}>Cargando eventos...</Text>
+            </View>
+        );
+    }
+
+    if (error) {
+        return (
+            <View style={styles.centered}>
+                <Text style={{color: 'red', textAlign: 'center'}}>Error: {error}</Text>
+            </View>
+        );
+    }
+
+    // Si no hay eventos
+    // **Importante:** Esto se refiere a si no hay eventos *originales* del backend.
+    // Si `data.length === 0` en el `useEffect`, esto se mostrará.
+    // Si hay eventos originales pero la lista `reels` está vacía por alguna razón (que no debería ocurrir con la duplicación),
+    // entonces este mensaje también aparecería.
+    if (reels.length === 0) {
+        return (
+            <View style={styles.centered}>
+                <Text style={styles.noEventsText}>No hay eventos próximos disponibles por ahora</Text>
+            </View>
+        );
+    }
+
+    // Renderizar la FlatList
     return (
         <FlatList
-            data={DATA}
-            keyExtractor={item => item.id}
-            renderItem={renderItem}
+            ref={scrollRef}
+            data={reels}
+            // Usa una key única, `cod_evento` + índice de copia para evitar warnings,
+            // aunque solo `cod_evento` podría ser suficiente si los datos son únicos.
+            // Para la duplicación, es mejor usar el índice para asegurar unicidad de la key en la lista final.
+            keyExtractor={(item, index) => `${item.cod_evento}-${index}`}
+            renderItem={renderReel}
             pagingEnabled
             showsVerticalScrollIndicator={false}
             decelerationRate="fast"
-            snapToInterval={height} // Be mindful of tab bar height here
+            snapToInterval={height - TAB_BAR_HEIGHT}
             snapToAlignment="start"
-            // The FlatList will take the height given by the Tab Navigator's screen area
+            onViewableItemsChanged={onViewRef.current}
+            viewabilityConfig={viewConfigRef.current}
         />
     );
 }
 
+// Estilos (sin cambios)
 const styles = StyleSheet.create({
-    cardContainer: {
-        width: width,
-        height: height, // This makes each item take the full screen height.
-                        // The tab bar will overlay the bottom part or the content area will be adjusted.
-                        // Expo Router's Tabs layout usually handles the content area correctly.
-        backgroundColor: '#000',
-    },
-    imageBackground: {
-        width: '100%', // Use '100%' for flexibility
-        height: '100%',
-    },
-    gradientOverlay: {
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        bottom: 0,
-        height: '50%',
-    },
-    infoContainer: {
-        position: 'absolute',
-        bottom: 60, // Increased slightly to ensure it's above a typical tab bar
-        left: 20,
-        right: 20,
-        paddingBottom: 10, // Add some padding at the very bottom of the text content
-    },
-    pubName: {
-        fontSize: 28,
-        color: '#fff',
-        fontWeight: 'bold',
-        marginBottom: 8,
-    },
-    pubDetail: {
-        fontSize: 16,
-        color: '#fff',
-        marginBottom: 4, // Added for better spacing
-    },
-    offerText: {
-        marginTop: 4,
-        fontSize: 18,
-        color: '#ffd700', // Gold color for offers
-        fontWeight: '600',
-    },
-    // backButton and backButtonText styles are removed if the button is removed
-    // backButton: {
-    //     marginTop: 16,
-    //     alignSelf: 'flex-start',
-    //     backgroundColor: 'rgba(0,0,0,0.5)',
-    //     paddingVertical: 8,
-    //     paddingHorizontal: 16,
-    //     borderRadius: 8,
-    // },
-    // backButtonText: {
-    //     color: '#fff',
-    //     fontSize: 16,
-    // },
+    cardContainer: { width, height: height - TAB_BAR_HEIGHT },
+    imageBackground: { flex: 1 },
+    overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)' },
+    infoContainer: { position: 'absolute', bottom: 20, left: 0, right: 0, padding: 20 },
+    title: { fontSize: 28, color: '#eee', fontWeight: 'bold' },
+    subtitle: { fontSize: 14, color: '#bbb', marginVertical: 4 },
+    statRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
+    statText: { color: '#ddd', fontSize: 13, marginLeft: 6 },
+    barBackground: { width: '100%', height: 6, backgroundColor: '#333', borderRadius: 3, overflow: 'hidden', marginTop: 4 },
+    barFill: { height: '100%', backgroundColor: '#e14eca' },
+    barFillMale: { height: '100%', backgroundColor: '#4ea8de', position: 'absolute', left: 0 },
+    barFillFemale: { height: '100%', backgroundColor: '#de4eae', position: 'absolute', right: 0 },
+    detail: { color: '#ccc', fontSize: 13, marginTop: 6 },
+    ageBarBackground: { flexDirection: 'row', width: '100%', height: 6, backgroundColor: '#222', borderRadius: 3, overflow: 'hidden', marginTop: 4, position: 'relative' },
+    ageBarSegment: { height: '100%' },
+    ageNeedle: { position: 'absolute', top: -4, width: 2, height: 14, backgroundColor: '#fff', zIndex: 1 },
+    actionRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 },
+    mapButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#2a2a2a', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20 },
+    factioButton: { backgroundColor: '#f4524d', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+    buttonText: { color: '#ddd', fontSize: 13, marginLeft: 6, fontWeight: 'bold' },
+    timerContainer: { position: 'absolute', height: 4, left: 0, backgroundColor: '#555' },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' },
+    noEventsText: { color: '#ccc', fontSize: 18, textAlign: 'center' },
 });

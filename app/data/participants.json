@@ -1,0 +1,53 @@
+{
+  "1": [
+    { "id": "p1",  "name": "Ana",    "age": 22, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Ana" },
+    { "id": "p2",  "name": "Bea",    "age": 24, "gender": "female", "orientation": "bisexual",      "image": "https://placehold.co/300x300?text=Bea" },
+    { "id": "p3",  "name": "Clara",  "age": 20, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Clara" },
+    { "id": "p4",  "name": "Diana",  "age": 26, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Diana" },
+    { "id": "p5",  "name": "Eva",    "age": 28, "gender": "female", "orientation": "bisexual",      "image": "https://placehold.co/300x300?text=Eva" },
+    { "id": "p6",  "name": "Fiona",  "age": 23, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Fiona" },
+    { "id": "p7",  "name": "Gloria", "age": 25, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Gloria" },
+    { "id": "p8",  "name": "Hanna",  "age": 21, "gender": "female", "orientation": "bisexual",      "image": "https://placehold.co/300x300?text=Hanna" },
+    { "id": "p9",  "name": "Iris",   "age": 27, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Iris" },
+    { "id": "p10", "name": "Julia",  "age": 29, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Julia" },
+    { "id": "p11", "name": "Kara",   "age": 22, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Kara" },
+    { "id": "p12", "name": "Luna",   "age": 24, "gender": "female", "orientation": "bisexual",      "image": "https://placehold.co/300x300?text=Luna" },
+    { "id": "p13", "name": "Mia",    "age": 20, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Mia" },
+    { "id": "p14", "name": "Nina",   "age": 26, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Nina" },
+    { "id": "p15", "name": "Olga",   "age": 28, "gender": "female", "orientation": "bisexual",      "image": "https://placehold.co/300x300?text=Olga" }
+  ],
+  "2": [
+    { "id": "q1",  "name": "Paula",   "age": 23, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Paula" },
+    { "id": "q2",  "name": "Raquel",  "age": 25, "gender": "female", "orientation": "bisexual",      "image": "https://placehold.co/300x300?text=Raquel" },
+    { "id": "q3",  "name": "Sara",    "age": 22, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Sara" },
+    { "id": "q4",  "name": "Tina",    "age": 27, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Tina" },
+    { "id": "q5",  "name": "Una",     "age": 29, "gender": "female", "orientation": "bisexual",      "image": "https://placehold.co/300x300?text=Una" },
+    { "id": "q6",  "name": "Vera",    "age": 24, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Vera" },
+    { "id": "q7",  "name": "Wendy",   "age": 26, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Wendy" },
+    { "id": "q8",  "name": "Ximena",  "age": 21, "gender": "female", "orientation": "bisexual",      "image": "https://placehold.co/300x300?text=Ximena" },
+    { "id": "q9",  "name": "Yara",    "age": 28, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Yara" },
+    { "id": "q10", "name": "Zoe",     "age": 20, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Zoe" },
+    { "id": "q11", "name": "Ava",     "age": 22, "gender": "female", "orientation": "bisexual",      "image": "https://placehold.co/300x300?text=Ava" },
+    { "id": "q12", "name": "Bella",   "age": 24, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Bella" },
+    { "id": "q13", "name": "Carmen",  "age": 26, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Carmen" },
+    { "id": "q14", "name": "Dana",    "age": 23, "gender": "female", "orientation": "bisexual",      "image": "https://placehold.co/300x300?text=Dana" },
+    { "id": "q15", "name": "Elsa",    "age": 27, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Elsa" }
+  ],
+  "3": [
+    { "id": "r1",  "name": "Fey",     "age": 21, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Fey" },
+    { "id": "r2",  "name": "Gina",    "age": 23, "gender": "female", "orientation": "bisexual",      "image": "https://placehold.co/300x300?text=Gina" },
+    { "id": "r3",  "name": "Hannah",  "age": 25, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Hannah" },
+    { "id": "r4",  "name": "Ivy",     "age": 22, "gender": "female", "orientation": "bisexual",      "image": "https://placehold.co/300x300?text=Ivy" },
+    { "id": "r5",  "name": "Jade",    "age": 24, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Jade" },
+    { "id": "r6",  "name": "Kylie",   "age": 26, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Kylie" },
+    { "id": "r7",  "name": "Lea",     "age": 28, "gender": "female", "orientation": "bisexual",      "image": "https://placehold.co/300x300?text=Lea" },
+    { "id": "r8",  "name": "Maya",    "age": 20, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Maya" },
+    { "id": "r9",  "name": "Nora",    "age": 27, "gender": "female", "orientation": "bisexual",      "image": "https://placehold.co/300x300?text=Nora" },
+    { "id": "r10", "name": "Opal",    "age": 29, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Opal" },
+    { "id": "r11", "name": "Quinn",   "age": 22, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Quinn" },
+    { "id": "r12", "name": "Rosa",    "age": 24, "gender": "female", "orientation": "bisexual",      "image": "https://placehold.co/300x300?text=Rosa" },
+    { "id": "r13", "name": "Sofia",   "age": 26, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Sofia" },
+    { "id": "r14", "name": "Tara",    "age": 23, "gender": "female", "orientation": "heterosexual", "image": "https://placehold.co/300x300?text=Tara" },
+    { "id": "r15", "name": "Una",     "age": 25, "gender": "female", "orientation": "bisexual",      "image": "https://placehold.co/300x300?text=Una" }
+  ]
+}
